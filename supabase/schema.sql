@@ -1924,7 +1924,8 @@ grant execute on function public.has_custom_permission(text,uuid) to anon,authen
 grant select,insert,update,delete on public.custom_roles,public.custom_role_assignments to authenticated;
 
 -- Only public content belongs here. Never store keys or private contacts.
-create table if not exists public.site_content(key text primary key check(key ~ '^[a-z][a-z0-9_]{0,79}$'),body text not null check(char_length(body) between 1 and 4000),updated_by uuid references public.profiles(id),updated_at timestamptz not null default now());
+create table if not exists public.site_content(key text primary key,body text not null check(char_length(body) between 1 and 4000),updated_by uuid references public.profiles(id),updated_at timestamptz not null default now());
+alter table public.site_content drop constraint if exists site_content_key_check;
 alter table public.site_content enable row level security;
 drop policy if exists "Public site content" on public.site_content;
 create policy "Public site content" on public.site_content for select using(true);
@@ -2033,9 +2034,6 @@ commit;
 begin;
 
 alter table public.site_content drop constraint if exists site_content_key_check;
-alter table public.site_content add constraint site_content_key_check check (
-  key ~ '^[a-z][a-z0-9_]{0,79}$'
-) not valid;
 
 insert into public.site_content(key, body)
 values
@@ -2055,8 +2053,6 @@ begin;
 
 alter table public.site_content drop constraint if exists site_content_key_check;
 alter table public.site_content drop constraint if exists site_content_body_check;
-alter table public.site_content add constraint site_content_key_check
-  check (key ~ '^[a-z][a-z0-9_]{0,79}$') not valid;
 alter table public.site_content add constraint site_content_body_check check (
   char_length(body) <= 4000 and (char_length(body) >= 1 or key in ('support_location','footer_contact'))
 ) not valid;
@@ -2127,8 +2123,6 @@ begin;
 
 alter table public.site_content drop constraint if exists site_content_key_check;
 alter table public.site_content drop constraint if exists site_content_body_check;
-alter table public.site_content add constraint site_content_key_check
-  check (key ~ '^[a-z][a-z0-9_]{0,79}$') not valid;
 alter table public.site_content add constraint site_content_body_check check (
   char_length(body) <= 4000 and (char_length(body) >= 1 or key in ('support_location','footer_contact','school_notice_text'))
 ) not valid;

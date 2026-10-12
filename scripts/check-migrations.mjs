@@ -35,8 +35,8 @@ for (const file of files) {
     policyState.set(name, state);
   }
 
-  if (/alter\s+table\s+public\.site_content\s+add\s+constraint\s+site_content_key_check[^;]*\bkey\s+in\s*\(/i.test(executable)) {
-    failures.push(`${file}: site_content key constraints must not reject CMS keys written by later sections`);
+  if (/\b(?:add\s+constraint\s+site_content_key_check|key\s+text\s+primary\s+key\s+check\s*\()/i.test(executable)) {
+    failures.push(`${file}: site_content keys are application-validated; a database key check would reject preserved legacy rows`);
   }
   for (const constraint of executable.matchAll(/alter\s+table\s+public\.site_content\s+add\s+constraint\s+(site_content_(?:key|body)_check)([^;]*);/gi)) {
     if (!/\bnot\s+valid\s*$/i.test(constraint[2])) failures.push(`${file}: ${constraint[1]} must be NOT VALID so reruns preserve legacy rows`);
