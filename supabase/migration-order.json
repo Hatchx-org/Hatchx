@@ -1,0 +1,22 @@
+{
+  "newProject": [
+    "profiles.sql", "admin_crud.sql", "member_actions.sql", "security_hardening.sql",
+    "core_platform.sql", "performance_indexes.sql", "club_governance.sql", "release_security_hardening.sql",
+    "club_communication.sql", "chat_member_names.sql", "chat_recent_messages.sql", "chat_safety_moderation.sql",
+    "opportunity_scholarships.sql", "account_roles_and_review.sql", "custom_permissions.sql", "operational_intelligence.sql",
+    "editable_support_content.sql", "site_cms_content.sql", "hatchx_rebrand.sql", "top_school_notice.sql",
+    "club_attendance.sql", "attendance_scheduling.sql", "club_fair_qr_links.sql", "student_registration_invites.sql",
+    "announcement_cms_workflow.sql", "announcement_calendar_enhancements.sql", "calendar_meeting_emergency.sql",
+    "announcement_audience_notifications.sql", "security_observability.sql", "site_cms_workflow.sql",
+    "club_membership_lifecycle.sql", "club_social_links.sql", "club_member_email_invitations.sql", "club_media_library.sql", "club_media_processing.sql",
+    "club_constitution_elections.sql", "club_finance.sql", "finance_permissions_and_reimbursements.sql",
+    "finance_ledger_staff_only.sql", "club_custom_tables.sql", "club_custom_tables_enhancements.sql",
+    "teacher_club_application_workflow.sql",
+    "admin_club_authority.sql", "club_officer_avatars.sql", "school_operations.sql", "public_club_constitutions.sql",
+    "workflow_completion.sql", "club_csv_advisor_import.sql", "home_dashboard.sql", "realtime_notifications_dashboard.sql", "request_notifications.sql",
+    "club_profile_tags_club101.sql", "club_profile_appearance.sql", "support_conversations.sql", "support_faqs.sql", "url_safe_club_slugs.sql"
+  ],
+  "existingProjectOnly": ["production_compatibility.sql"],
+  "optionalDevelopmentData": ["demo_clubs.sql"],
+  "ignoredLocalWork": ["club_custom_forms_sharing.sql", "teacher_permissions.sql"]
+}

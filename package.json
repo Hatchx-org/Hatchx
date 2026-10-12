@@ -1,0 +1,54 @@
+{
+  "name": "hatchx",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": "22.x"
+  },
+  "allowScripts": {
+    "unrs-resolver@1.12.2": true
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build --webpack",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test src/lib/*.test.ts",
+    "test:e2e": "playwright test --grep-invert '@live|@visual'",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:visual": "playwright test e2e/login.visual.spec.ts --update-snapshots=missing",
+    "test:e2e:update": "playwright test e2e/login.visual.spec.ts --update-snapshots",
+    "test:e2e:live": "HATCHX_E2E_LIVE=1 playwright test --grep @live",
+    "security:dependencies": "node scripts/check-dependency-audit.mjs",
+    "security:secrets": "node scripts/check-secrets.mjs",
+    "check:migrations": "node scripts/build-supabase-bootstrap.mjs --check && node scripts/check-migrations.mjs",
+    "db:bundle": "node scripts/build-supabase-bootstrap.mjs"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.12.5",
+    "@supabase/supabase-js": "^2.117.2",
+    "@vercel/analytics": "^2.0.1",
+    "next": "^16.3.3",
+    "qrcode": "^1.5.4",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "web-push": "^3.6.7"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.64.0",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^20",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "@types/web-push": "^3.6.4",
+    "babel-plugin-react-compiler": "1.0.0",
+    "eslint": "^9",
+    "eslint-config-next": "^16.3.3",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5"
+  }
+}

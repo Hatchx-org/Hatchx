@@ -1,0 +1,460 @@
+@import "tailwindcss";
+
+:root {
+  --navy: #2945a8;
+  --peach: #ffcc7a;
+  --orange: #ff8e68;
+  --coral-deep: #de7b6e;
+  --azure: #4772aa;
+  --sky: #589aef;
+  --powder: #97bff4;
+  --steel: #828d9d;
+  --cream: #fcf1dd;
+  --sidebar-bg: #0a0a0a;
+  --sidebar-surface: #262626;
+  --content-bg: #d9d9d9;
+  --home-bg: #889caa;
+  --ink: #1a1a1a;
+  --muted: #595959;
+  --card-bg: #ffffff;
+  --popover-bg: #ffffff;
+  --ring: #e2e2e2;
+  --line: rgba(0, 0, 0, 0.1);
+  --topbar-bg: rgba(246, 248, 252, 0.82);
+  --rail-bg: #f4f6fb;
+  --rail-surface: rgba(30, 50, 121, 0.08);
+  --page-glow: rgba(71, 114, 170, 0.2);
+  --page-accent: rgba(255, 142, 104, 0.16);
+}
+
+/* One global theme controls every surface. The attribute is set before paint. */
+[data-theme="dark"] {
+  --content-bg: #070911;
+  --card-bg: #101527;
+  --popover-bg: #101527;
+  --home-bg: #070911;
+  --ink: #fcf1dd;
+  --muted: rgba(252, 241, 221, 0.62);
+  --ring: rgba(252, 241, 221, 0.28);
+  --line: rgba(252, 241, 221, 0.16);
+  --topbar-bg: rgba(7, 9, 17, 0.78);
+  --rail-bg: #0b0911;
+  --rail-surface: rgba(255, 255, 255, 0.08);
+  --page-glow: rgba(88, 154, 239, 0.24);
+  --page-accent: rgba(255, 142, 104, 0.14);
+}
+
+[data-theme="light"] {
+  --content-bg: #eef2f8;
+  --card-bg: rgba(255, 255, 255, 0.88);
+  --popover-bg: #ffffff;
+  --home-bg: #e9eef7;
+  --ink: #000000;
+  --muted: #303642;
+  --ring: rgba(41, 69, 168, 0.2);
+  --line: rgba(28, 42, 75, 0.12);
+}
+
+.brand-logo {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  overflow: hidden;
+  border-radius: 22%;
+  background: url("/brand-logo-light.png") center / contain no-repeat;
+}
+
+[data-theme="dark"] .brand-logo { background-image: url("/brand-logo-dark.png"); }
+.brand-logo-variant-light { background-image: url("/brand-logo-light.png") !important; }
+.brand-logo-variant-dark { background-image: url("/brand-logo-dark.png") !important; }
+
+@theme inline {
+  --color-navy: var(--navy);
+  --color-navy-dark: #1e3279;
+  --color-peach: var(--peach);
+  --color-orange: var(--orange);
+  --color-coral-deep: var(--coral-deep);
+  --color-azure: var(--azure);
+  --color-sky: var(--sky);
+  --color-powder: var(--powder);
+  --color-steel: var(--steel);
+  --color-cream: var(--cream);
+  --color-sidebar-bg: var(--sidebar-bg);
+  --color-sidebar-surface: var(--sidebar-surface);
+  --color-content-bg: var(--content-bg);
+  --color-home-bg: var(--home-bg);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-card: var(--card-bg);
+  --color-line: var(--line);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-display: var(--font-montserrat), var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+
+  /* Design system — radius scale (from the Figma navigation and card specs) */
+  --radius-focus: 4px; /* focus-visible ring corners */
+  --radius-control: 8px; /* inputs, small chips, tags */
+  --radius-light: 12px; /* compact grouped surfaces, dropdown rows */
+  --radius-card: 16px; /* cards, dashboard tiles, search popover */
+  --radius-panel: 24px; /* hero/featured panels, login card */
+  --radius-nav: 8.75px; /* sidebar icon rows (Figma exact) */
+
+  /* Design system — spacing (Figma exact for sidebar) */
+  --spacing-nav: 7px; /* sidebar icon row gap */
+}
+
+body {
+  background: var(--content-bg);
+  color: var(--ink);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  transition: background-color 220ms ease, color 220ms ease;
+}
+
+.about-hero {
+  background:
+    radial-gradient(circle at 82% 20%, rgba(84, 137, 216, .28), transparent 30rem),
+    radial-gradient(circle at 18% 85%, rgba(255, 142, 104, .16), transparent 28rem),
+    linear-gradient(145deg, #060913 0%, #09142c 58%, #142b67 100%);
+}
+
+.about-grid {
+  opacity: .34;
+  background-image: linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px);
+  background-size: 52px 52px;
+  mask-image: linear-gradient(to bottom, black, transparent 92%);
+}
+
+.about-gradient-text {
+  background: linear-gradient(90deg, #a9ccff 0%, #f7f2e8 48%, #ffae8c 100%);
+  background-clip: text;
+  color: transparent;
+}
+
+.about-orbit { position: absolute; z-index: -1; border: 1px solid rgba(255,255,255,.08); border-radius: 999px; }
+.about-orbit-one { width: min(62vw, 800px); height: min(62vw, 800px); right: -18%; top: -34%; }
+.about-orbit-two { width: min(38vw, 520px); height: min(38vw, 520px); right: -4%; top: -10%; }
+
+.about-node {
+  position: absolute;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 999px;
+  background: rgba(8,17,38,.72);
+  padding: .55rem .9rem;
+  color: rgba(255,255,255,.78);
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 10px 40px rgba(0,0,0,.2);
+}
+
+@keyframes about-enter { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes about-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+.about-reveal { animation: about-enter 700ms cubic-bezier(.2,.7,.2,1) both; }
+.about-reveal-delay { animation-delay: 100ms; }
+.about-reveal-delay-2 { animation-delay: 220ms; }
+.about-node { animation: about-float 5s ease-in-out infinite; }
+.about-node:nth-of-type(2) { animation-delay: -1.5s; }
+.about-node:nth-of-type(3) { animation-delay: -3s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .about-reveal, .about-node { animation: none; }
+}
+
+.school-notice-shell {
+  flex: none;
+  background: var(--notice-background);
+  color: var(--notice-foreground);
+  border-bottom: 1px solid color-mix(in srgb, var(--notice-foreground) 14%, transparent);
+}
+
+.school-notice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  max-width: 1800px;
+  min-height: 38px;
+  margin-inline: auto;
+  padding: 6px 20px;
+}
+
+.school-notice p {
+  margin: 0;
+  font-size: .8rem;
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.school-notice-icon {
+  width: 17px;
+  height: 17px;
+  flex: none;
+}
+
+.school-notice button {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 999px;
+  color: inherit;
+  cursor: pointer;
+  transition: background-color 160ms ease, transform 160ms ease;
+}
+
+.school-notice button svg { width: 18px; height: 18px; }
+.school-notice button:hover { background: color-mix(in srgb, currentColor 12%, transparent); }
+.school-notice button:active { transform: scale(0.94); }
+.school-notice button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+
+@media (max-width: 639px) {
+  .school-notice { align-items: start; gap: 8px; padding: 8px 12px; }
+  .school-notice p { font-size: .78rem; line-height: 1.35; }
+  .school-notice-icon { width: 18px; height: 18px; }
+}
+
+
+::selection { background: var(--powder); color: #111111; }
+
+* { scrollbar-color: rgba(151, 191, 244, 0.45) transparent; scrollbar-width: thin; }
+
+/* Figma signature card: black → deep navy gradient with a soft white glow */
+.card-gradient {
+  background: linear-gradient(165deg, #05070d 0%, #0b1330 67%, #172b70 88%, #2945a8 100%);
+  box-shadow: 0 18px 50px -34px rgba(151, 191, 244, 0.8);
+}
+
+[data-theme="light"] .card-gradient {
+  background: linear-gradient(145deg, rgba(255,255,255,0.96), rgba(241,245,252,0.94) 62%, rgba(221,231,249,0.96));
+  border: 1px solid rgba(41, 69, 168, 0.12);
+  box-shadow: 0 18px 55px -38px rgba(28, 55, 128, 0.48), inset 0 1px 0 rgba(255,255,255,0.9);
+}
+
+[data-theme="light"] .card-gradient .text-cream,
+[data-theme="light"] .hub-unified-backdrop > * > * > .text-cream { color: var(--ink) !important; }
+[data-theme="light"] .card-gradient [class*="text-cream/"] { color: var(--muted) !important; }
+[data-theme="light"] .hub-unified-backdrop [class~="text-cream"] { color: var(--ink) !important; }
+[data-theme="light"] .hub-unified-backdrop [class*="text-cream/"] { color: var(--muted) !important; }
+[data-theme="light"] .hub-unified-backdrop .bg-navy.text-cream,
+[data-theme="light"] .hub-unified-backdrop .bg-navy .text-cream { color: #fcf1dd !important; }
+
+/* Some tools intentionally keep a dark canvas in both site themes. */
+[data-theme="light"] .hub-unified-backdrop .theme-fixed-dark [class~="text-cream"] {
+  color: var(--cream) !important;
+}
+[data-theme="light"] .hub-unified-backdrop .theme-fixed-dark [class*="text-cream/"] {
+  color: color-mix(in srgb, var(--cream) 72%, transparent) !important;
+}
+
+@media (hover: hover) {
+  .card-gradient { transition: transform 220ms ease, border-color 220ms ease, box-shadow 220ms ease; }
+  .card-gradient:hover { border-color: rgba(151, 191, 244, 0.36); box-shadow: 0 24px 60px -34px rgba(151, 191, 244, 0.95); }
+}
+
+/* Login backdrop: responsive layered motion that never controls layout. */
+.login-gradient {
+  background:
+    radial-gradient(circle at 50% 40%, rgba(48, 64, 116, .22), transparent 31rem),
+    linear-gradient(180deg, #111a38 0%, #111936 57%, #080b22 69%, #09091f 100%);
+}
+
+@keyframes login-orb-intro {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.45); }
+  100% { opacity: .9; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes login-card-intro {
+  from { opacity: 0; transform: translateY(24px) scale(0.975); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes login-copy-intro {
+  from { opacity: 0; transform: translateX(-28px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes login-orbit-drift {
+  from { transform: translate3d(-3%, 2%, 0) rotate(-8deg); }
+  to { transform: translate3d(4%, -3%, 0) rotate(10deg); }
+}
+
+@keyframes login-figma-float {
+  0%, 100% { transform: translate3d(-50%, -7px, 0) scale(1); }
+  50% { transform: translate3d(-50%, 13px, 0) scale(.985); }
+}
+
+@keyframes login-figma-glow {
+  0%, 100% { opacity: .78; filter: saturate(.9) brightness(.96); }
+  50% { opacity: 1; filter: saturate(1.06) brightness(1.08); }
+}
+
+@keyframes login-figma-reflect {
+  0%, 100% { opacity: .68; transform: translateX(-50%) scale(1, .96); }
+  50% { opacity: .42; transform: translateX(-50%) scale(.9, .82); }
+}
+
+.login-grid { opacity: .16; background-image: linear-gradient(rgba(255,255,255,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.12) 1px, transparent 1px); background-size: 64px 64px; mask-image: linear-gradient(to bottom, black, transparent 78%); }
+.login-figma-stage { overflow: hidden; }
+.login-figma-stage::after { content: ""; position: absolute; inset: 58% 0 auto; height: 12%; background: linear-gradient(180deg, rgba(10,14,39,0), rgba(7,9,30,.7) 35%, rgba(7,9,30,.95)); }
+.login-figma-orb { position: absolute; z-index: 1; left: 52%; top: 23%; width: 250px; height: 250px; animation: login-figma-float 4.8s cubic-bezier(.45,.05,.55,.95) infinite; }
+.login-figma-core,
+.login-figma-shine { position: absolute; left: -100px; top: -96px; width: 450px; height: 450px; max-width: none; }
+.login-figma-shine { animation: login-figma-glow 4.8s ease-in-out infinite; }
+.login-figma-reflection { position: absolute; z-index: 2; left: 52%; top: 66%; width: 250px; height: 250px; animation: login-figma-reflect 4.8s cubic-bezier(.45,.05,.55,.95) infinite; }
+.login-intro-orb { background: rgba(188, 221, 255, .78); box-shadow: 0 0 110px rgba(123, 184, 255, .7); animation: login-orb-intro 900ms cubic-bezier(.2,.8,.2,1) both; }
+.login-intro-card { animation: login-card-intro 560ms cubic-bezier(.2,.8,.2,1) both; }
+.login-intro-copy { animation: login-copy-intro 620ms 80ms ease-out both; }
+.login-orbit { border: 1px solid rgba(185,217,255,.18); border-radius: 42% 58% 54% 46%; animation: login-orbit-drift 11s ease-in-out infinite alternate; }
+.login-orbit-one { left: -12vw; top: 12vh; width: min(48rem, 70vw); height: min(48rem, 70vw); }
+.login-orbit-two { right: -10vw; bottom: -26vh; width: min(42rem, 68vw); height: min(42rem, 68vw); animation-duration: 15s; animation-delay: -5s; }
+
+@media (max-width: 1023px) {
+  .login-page { overflow-y: auto; }
+  .login-intro-card { animation-duration: 440ms; }
+  .login-figma-stage { opacity: .34; }
+  .login-figma-orb { left: 50%; top: 13%; transform-origin: center; }
+  .login-figma-reflection { left: 50%; top: 72%; }
+}
+
+@media (max-width: 639px) {
+  .login-nav-wordmark { display: none; }
+  .login-orbit-one { left: -55vw; top: 8vh; width: 120vw; height: 120vw; }
+  .login-orbit-two { right: -60vw; bottom: -10vh; width: 115vw; height: 115vw; }
+  .login-figma-stage { transform: scale(.72); transform-origin: 50% 30%; width: 139%; margin-left: -19.5%; }
+}
+
+@media (max-width: 639px) {
+  .login-intro-card .login-card-support,
+  .login-intro-card .login-card-policies { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-intro-orb,
+  .login-intro-card { animation: none; }
+  .login-intro-copy { animation: none; }
+  .login-orbit { animation: none; }
+  .login-figma-orb,
+  .login-figma-shine,
+  .login-figma-reflection { animation: none; }
+}
+
+/* Cream glow used on the profile name banner */
+.glow-cream {
+  box-shadow: -2.4px 2.4px 9.5px -2.4px #fcf1dd;
+}
+
+/* Shared Figma canvas: one mesh treatment across public Hub experiences. */
+.hub-unified-backdrop,
+.profile-backdrop,
+.club-detail-backdrop,
+.opportunity-backdrop,
+.support-backdrop {
+  background-color: var(--content-bg);
+  background-image:
+    radial-gradient(circle at 12% 8%, var(--page-glow), transparent 32rem),
+    radial-gradient(circle at 88% 28%, var(--page-accent), transparent 28rem),
+    linear-gradient(135deg, transparent 0 48%, color-mix(in srgb, var(--line) 34%, transparent) 49%, transparent 50% 100%),
+    url("/profile/mesh-gradient.svg");
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-size: auto, auto, 42px 42px, min(1200px, 100vw) auto;
+}
+
+[data-theme="light"] .hub-unified-backdrop,
+[data-theme="light"] .profile-backdrop,
+[data-theme="light"] .club-detail-backdrop,
+[data-theme="light"] .opportunity-backdrop,
+[data-theme="light"] .support-backdrop {
+  background-image:
+    radial-gradient(circle at 10% 5%, rgba(88,154,239,.24), transparent 32rem),
+    radial-gradient(circle at 92% 24%, rgba(255,142,104,.2), transparent 28rem),
+    linear-gradient(135deg, transparent 0 48%, rgba(41,69,168,.025) 49%, transparent 50% 100%);
+}
+
+.site-topbar { background-color: var(--topbar-bg) !important; backdrop-filter: blur(18px) saturate(140%); }
+.search-popover {
+  background-color: var(--popover-bg);
+  box-shadow: 0 24px 64px -24px rgba(7, 9, 17, 0.58), 0 8px 24px -14px rgba(7, 9, 17, 0.32);
+  isolation: isolate;
+}
+.page-title-card {
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background-color: var(--topbar-bg);
+  padding: clamp(1.5rem, 3vw, 2rem);
+  box-shadow: 0 18px 50px -38px rgba(88, 154, 239, 0.72);
+  backdrop-filter: blur(18px) saturate(140%);
+}
+.theme-toggle { color: var(--ink); }
+
+/* A restrained parallax drift gives long pages depth without moving content. */
+@keyframes hub-backdrop-parallax {
+  from { background-position: center 0; }
+  to { background-position: center -140px; }
+}
+
+@supports (animation-timeline: scroll()) {
+  .hub-unified-backdrop {
+    animation: hub-backdrop-parallax linear both;
+    animation-timeline: scroll(self block);
+  }
+
+  .club-detail-backdrop,
+  .opportunity-backdrop,
+  .support-backdrop {
+    animation: hub-backdrop-parallax linear both;
+    animation-timeline: scroll(nearest block);
+  }
+
+  .profile-backdrop {
+    animation: hub-backdrop-parallax linear both;
+    animation-timeline: scroll(self block);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hub-unified-backdrop,
+  .profile-backdrop,
+  .club-detail-backdrop,
+  .opportunity-backdrop,
+  .support-backdrop {
+    animation: none;
+  }
+}
+
+
+/* Figma home hero blobs: azure / sky / coral blurred orbs */
+.hero-blobs {
+  background:
+    radial-gradient(closest-side, rgba(71, 114, 170, 0.95), transparent 70%),
+    radial-gradient(closest-side, rgba(88, 154, 239, 0.95), transparent 70%),
+    radial-gradient(closest-side, rgba(255, 142, 104, 0.95), transparent 70%);
+  filter: blur(90px);
+  opacity: 0.4;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--navy);
+  outline-offset: 2px;
+  border-radius: var(--radius-focus);
+}
+
+.theme-dark a:focus-visible,
+.theme-dark button:focus-visible,
+.theme-dark input:focus-visible,
+.theme-dark summary:focus-visible {
+  outline-color: var(--powder);
+}
