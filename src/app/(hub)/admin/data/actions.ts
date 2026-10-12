@@ -34,7 +34,7 @@ export async function importClubsCsv(formData: FormData) {
   const validRows = preview.filter((row) => !row.errors.length).length;
   const errorRows = preview.length - validRows;
   const batch = await context.db.from("club_import_batches").insert({ created_by: context.user.id, file_name: file.name, total_rows: preview.length, valid_rows: validRows, error_rows: errorRows, status: "preview" }).select("id").maybeSingle();
-  if (!batch.data) return { ok: false, message: "CSV preview requires workflow_completion.sql and club_csv_advisor_import.sql." };
+  if (!batch.data) return { ok: false, message: "CSV preview requires supabase/schema.sql and supabase/schema.sql." };
   const savedRows = await context.db.from("club_import_rows").insert(preview.map((row) => ({ ...row, batch_id: batch.data!.id })));
   if (savedRows.error) return { ok: false, message: "The CSV preview could not be saved." };
   revalidatePath("/admin/data");
@@ -97,7 +97,7 @@ export async function applyClubImport(formData: FormData) {
     } else {
       const existingPending = await context.db.from("pending_club_advisors").select("id").eq("club_id", clubId).eq("email", payload.advisor_email).maybeSingle();
       const pending = await context.db.from("pending_club_advisors").upsert({ club_id: clubId, email: payload.advisor_email, display_name: payload.advisor, created_by: context.user.id }, { onConflict: "club_id,email" }).select("id").maybeSingle();
-      if (!pending.data) return { ok: false, message: "Apply club_csv_advisor_import.sql before importing unregistered Advisors." };
+      if (!pending.data) return { ok: false, message: "Apply supabase/schema.sql before importing unregistered Advisors." };
       if (!existingPending.data) await logRelatedRecord(context.db, batchId, row.id, "pending_advisor", pending.data.id);
     }
     count += 1;

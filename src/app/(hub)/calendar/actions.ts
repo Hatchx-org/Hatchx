@@ -56,6 +56,6 @@ export async function toggleEventRsvp(formData: FormData): Promise<void> {
     if (error) return;
   }
 
-  revalidatePath(`/events/${eventId}`);
+  revalidatePath(`/calendar/${eventId}`);
   revalidatePath("/calendar");
 }

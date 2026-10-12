@@ -59,7 +59,7 @@ export default async function ClubOperationsPage({ params }: { params: Promise<{
       <p className="mt-2 text-muted">Maintain the Club&apos;s official constitution and amendment history.</p>
     </header>
 
-    {versions.error && <p role="alert" className="rounded-card border border-orange/40 bg-card p-5">The Constitution database is not ready. An Admin must run <code>supabase/club_constitution_elections.sql</code>.</p>}
+    {versions.error && <p role="alert" className="rounded-card border border-orange/40 bg-card p-5">The Constitution database is not ready. An Admin must run <code>supabase/schema.sql</code>.</p>}
 
     <section className="rounded-[20px] border border-line bg-card p-6 shadow-sm">
       <p className="text-xs font-bold uppercase tracking-[.16em] text-powder">Official document</p>

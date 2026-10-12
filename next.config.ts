@@ -15,6 +15,7 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      { source: "/events/:path*", destination: "/calendar/:path*", permanent: true },
       {
         source: "/clubs/key-club-cfd268af",
         destination: "/clubs/key-club",

@@ -78,7 +78,7 @@ export async function submitClubApplication(
   if (error) {
     console.error("Club application submission failed", { code: error.code, message: error.message });
     if (error.code === "42501" || /row-level security|permission denied/i.test(error.message)) {
-      return { ok: false, message: "The database blocked this submission. Ask an Admin to run teacher_club_application_workflow.sql and confirm your account role is Teacher." };
+      return { ok: false, message: "The database blocked this submission. Ask an Admin to run supabase/schema.sql and confirm your account role is Teacher." };
     }
     if (error.code === "23514") {
       return { ok: false, message: "One of the application fields does not match the database rules. Check the category and text lengths, then try again." };
@@ -86,8 +86,8 @@ export async function submitClubApplication(
     if (error.code === "23502") {
       const missingColumn = error.message.match(/column ["']([^"']+)["']/i)?.[1];
       return { ok: false, message: missingColumn
-        ? `The database still requires an obsolete field (${missingColumn}). Ask an Admin to rerun the latest teacher_club_application_workflow.sql migration.`
-        : "The Club application database schema is out of date. An Admin needs to rerun the latest teacher_club_application_workflow.sql migration." };
+        ? `The database still requires an obsolete field (${missingColumn}). Ask an Admin to rerun the latest supabase/schema.sql migration.`
+        : "The Club application database schema is out of date. An Admin needs to rerun the latest supabase/schema.sql migration." };
     }
     if (error.code === "23505") {
       return { ok: false, message: "A matching Club application already exists." };
@@ -296,7 +296,7 @@ export async function postClubMessage(
 
   const supabase = await createServerClient();
   const permission = await supabase.rpc("can_post_club_chat", { p_club_id: clubId, p_policy_version: CLUB_CHAT_POLICY_VERSION });
-  if (permission.error) return { ok: false, message: "Chat safety controls are not ready. Ask an Admin to apply chat_safety_moderation.sql." };
+  if (permission.error) return { ok: false, message: "Chat safety controls are not ready. Ask an Admin to apply supabase/schema.sql." };
   if (!permission.data) {
     const state = await supabase.rpc("get_club_chat_state", { p_club_id: clubId, p_policy_version: CLUB_CHAT_POLICY_VERSION });
     if (state.data?.[0]?.restricted) return { ok: false, message: "Your chat posting permission is paused. Contact the Club Advisor if you believe this is a mistake." };
@@ -321,7 +321,7 @@ export async function acceptClubChatRules(formData: FormData) {
   if (!user || !clubId || !slug || !confirmed || !isSupabaseConfigured()) return { ok: false, message: "Confirm that you will follow every chat rule." };
   const supabase = await createServerClient();
   const { error } = await supabase.rpc("accept_club_chat_rules", { p_club_id: clubId, p_policy_version: CLUB_CHAT_POLICY_VERSION });
-  if (error) return { ok: false, message: "The agreement could not be recorded. Ask an Admin to apply chat_safety_moderation.sql." };
+  if (error) return { ok: false, message: "The agreement could not be recorded. Ask an Admin to apply supabase/schema.sql." };
   revalidatePath(`/clubs/${slug}`);
   return { ok: true, message: "Chat rules accepted. You can now take part in the conversation." };
 }
@@ -344,7 +344,7 @@ export async function setClubChatRestriction(formData: FormData) {
   });
   if (error) {
     if (["42501", "22023"].includes(error.code)) return { ok: false, message: error.code === "42501" ? "Only an Admin or this Club’s Advisor can change chat access." : "This member’s chat access cannot be changed with these details." };
-    return { ok: false, message: "Chat access was not changed. Apply chat_safety_moderation.sql and try again." };
+    return { ok: false, message: "Chat access was not changed. Apply supabase/schema.sql and try again." };
   }
   revalidatePath(`/clubs/${slug}`);
   return { ok: true, message: restricted ? "Chat posting permission paused and recorded." : "Chat posting permission restored and recorded." };

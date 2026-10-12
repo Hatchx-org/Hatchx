@@ -4,7 +4,7 @@ import { rankSearchResults } from "./search-ranking.ts";
 
 const results = [
   { kind: "Club" as const, title: "Robotics Club", href: "/clubs/robotics", meta: "STEM" },
-  { kind: "Event" as const, title: "Robotics Showcase", href: "/events/showcase", meta: "May 10" },
+  { kind: "Event" as const, title: "Robotics Showcase", href: "/calendar/showcase", meta: "May 10" },
   { kind: "Club" as const, title: "Art Club", href: "/clubs/art", meta: "Robotics collaboration" },
   { kind: "Club" as const, title: "Robotics Club", href: "/clubs/robotics", meta: "duplicate" },
 ];
@@ -12,7 +12,7 @@ const results = [
 test("ranks title matches ahead of metadata matches and removes duplicates", () => {
   assert.deepEqual(
     rankSearchResults(results, "robotics").map((result) => result.href),
-    ["/clubs/robotics", "/events/showcase", "/clubs/art"],
+    ["/clubs/robotics", "/calendar/showcase", "/clubs/art"],
   );
 });
 

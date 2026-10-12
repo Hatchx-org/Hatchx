@@ -55,7 +55,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
           <code className="font-mono text-xs">NEXT_PUBLIC_SUPABASE_URL</code> and{" "}
           <code className="font-mono text-xs">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> to{" "}
           <code className="font-mono text-xs">.env.local</code>, then apply{" "}
-          <code className="font-mono text-xs">supabase/profiles.sql</code> in the Supabase
+          <code className="font-mono text-xs">supabase/schema.sql</code> in the Supabase
           SQL Editor to manage users.
         </div>
       ) : (

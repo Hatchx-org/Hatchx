@@ -29,7 +29,6 @@ async function loadHomeSection<T>(source: string, load: () => Promise<T>, fallba
     return { data: fallback, failed: true };
   }
 }
-
 export default async function Home() {
   const user = await getCurrentUser();
   if (user) {
@@ -145,8 +144,8 @@ export default async function Home() {
 
         <section className="mt-10">
           <SectionHeader
-            title="Events"
-            subtitle="Bayside hosts fun, engaging events for students to enjoy. Check out the date, time, location, and price."
+            title="Calendar"
+            subtitle="Find school events, sports dates, and Club meetings together in one calendar."
             href="/calendar"
             linkLabel="VIEW ALL"
           />
@@ -163,39 +162,8 @@ export default async function Home() {
           )}
         </section>
 
-        <section className="mt-10">
-          <SectionHeader
-            title="Spirit Week"
-            subtitle="Spirit Week is a time to show off our SCHOOL SPIRIT! Each day of the week is filled with something different."
-            href="/spirit-week"
-            linkLabel="VIEW ALL"
-          />
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            {spiritDays.map((d) => (
-              <div
-                key={d.day}
-                className={`flex flex-col justify-between rounded-card p-5 shadow-sm ${d.color}`}
-              >
-                <span className="text-xs font-bold uppercase tracking-wider opacity-80">
-                  {d.day}
-                </span>
-                <span className="mt-3 font-display text-base font-bold leading-snug">
-                  {d.name}
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
       </main>
       </div>
     </HubShell>
   );
 }
-
-const spiritDays = [
-  { day: "Monday", name: "Pajama Day", color: "bg-navy text-cream" },
-  { day: "Tuesday", name: "Twin Day", color: "bg-peach text-black" },
-  { day: "Wednesday", name: "Dress Like a Teacher Day", color: "bg-orange text-black" },
-  { day: "Thursday", name: "Class Color Day", color: "bg-cream text-navy" },
-  { day: "Friday", name: "Blue & Gold Day", color: "bg-navy text-cream" },
-];

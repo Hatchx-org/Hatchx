@@ -53,7 +53,7 @@ export default async function AdminAnnouncementsPage({ searchParams }: { searchP
           <code className="font-mono text-xs">NEXT_PUBLIC_SUPABASE_URL</code> and{" "}
           <code className="font-mono text-xs">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> to{" "}
           <code className="font-mono text-xs">.env.local</code>, then apply{" "}
-          <code className="font-mono text-xs">supabase/admin_crud.sql</code> in the Supabase
+          <code className="font-mono text-xs">supabase/schema.sql</code> in the Supabase
           SQL Editor to publish and manage announcements.
         </div>
       )}

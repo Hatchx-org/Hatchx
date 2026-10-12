@@ -23,14 +23,14 @@ export async function saveSupportFaq(_previous: FaqActionState, formData: FormDa
   if (intent === "unpublish") {
     if (!faqId) return { ok: false, message: "FAQ not found." };
     const { error } = await db.from("support_faqs").update({ published: false, updated_by: user.id, updated_at: new Date().toISOString() }).eq("id", faqId).eq("source_request_id", requestId);
-    if (error) return { ok: false, message: "FAQ could not be unpublished. Apply support_faqs.sql first." };
+    if (error) return { ok: false, message: "FAQ could not be unpublished. Apply supabase/schema.sql first." };
     revalidatePath("/support"); revalidatePath(`/support/${requestId}`);
     return { ok: true, message: "FAQ removed from the public Support page." };
   }
   if (question.length < 5 || question.length > 180 || answer.length < 10 || answer.length > 4000) return { ok: false, message: "Use a 5–180 character question and a 10–4,000 character answer." };
   const payload = { source_request_id: requestId, question, answer, published: true, updated_by: user.id, updated_at: new Date().toISOString() };
   const result = faqId ? await db.from("support_faqs").update(payload).eq("id", faqId).eq("source_request_id", requestId) : await db.from("support_faqs").insert({ ...payload, created_by: user.id });
-  if (result.error) return { ok: false, message: "FAQ could not be saved. Apply support_faqs.sql first." };
+  if (result.error) return { ok: false, message: "FAQ could not be saved. Apply supabase/schema.sql first." };
   revalidatePath("/support"); revalidatePath(`/support/${requestId}`);
   return { ok: true, message: faqId ? "FAQ updated and published." : "Question and answer published to FAQ." };
 }

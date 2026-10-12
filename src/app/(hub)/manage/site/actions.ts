@@ -17,7 +17,7 @@ export async function saveSiteDraft(key: string, body: string) {
   if (!context) return "You do not have permission to edit public content.";
   if (!Object.hasOwn(siteTextDefaults, key) || body.length > 4000) return "Draft is too long or uses an unknown field.";
   const { error } = await context.db.from("site_content_drafts").upsert({ user_id: context.user.id, key, body, updated_at: new Date().toISOString() });
-  return error ? "Draft could not be saved. Apply site_cms_workflow.sql." : "Draft saved.";
+  return error ? "Draft could not be saved. Apply supabase/schema.sql." : "Draft saved.";
 }
 
 /** Enforce capability on every write, even if an old editor tab stays open. */
@@ -65,7 +65,7 @@ export async function saveSchoolNotice(_state: string, form: FormData) {
     { key: "school_notice_text_color", body: textColor, updated_by: context.user.id, updated_at: updatedAt },
   ];
   const { error } = await context.db.from("site_content").upsert(rows);
-  if (error) return "Unable to save. Apply top_school_notice.sql and check your permissions.";
+  if (error) return "Unable to save. Apply supabase/schema.sql and check your permissions.";
 
   const keys = rows.map((row) => row.key);
   await Promise.all([

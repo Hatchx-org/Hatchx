@@ -30,7 +30,7 @@ export default async function EventDetailPage({
       <article className={`relative overflow-hidden rounded-[26px] border p-8 shadow-sm sm:p-12 ${event.meetingEffect ? "border-red-500 bg-red-50 text-red-950 ring-2 ring-red-500/25" : "border-[#97b4de] bg-[#d4cbbc] text-[#2a2829]"}`}>
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <span className={`rounded-full px-3 py-1 font-semibold capitalize text-cream ${event.meetingEffect ? "bg-red-700" : "bg-navy"}`}>
-            {event.meetingEffect ? "No meetings" : event.category === "spirit-week" ? "Spirit Week" : event.category}
+            {event.meetingEffect ? "No meetings" : event.category === "sports" ? "Sports" : "Calendar"}
           </span>
           <span className="rounded-full bg-peach/60 px-3 py-1 font-semibold text-black">
             {event.price}
@@ -68,7 +68,7 @@ export default async function EventDetailPage({
               </form>
             ) : (
               <p className="text-sm text-muted">
-                <Link href={`/login?next=/events/${event.id}`} className="font-semibold text-powder hover:text-cream">
+                <Link href={`/login?next=/calendar/${event.id}`} className="font-semibold text-powder hover:text-cream">
                   Sign in
                 </Link>{" "}
                 to let organizers know you&apos;re coming ({rsvp.count} going).
@@ -79,8 +79,8 @@ export default async function EventDetailPage({
       </article>
 
       <div className="mt-6 text-sm">
-        <Link href="/events" className="font-semibold text-powder hover:text-cream">
-          ← Back to Events
+        <Link href="/calendar" className="font-semibold text-powder hover:text-cream">
+          ← Back to Calendar
         </Link>
       </div>
     </div>

@@ -100,7 +100,7 @@ export async function updateFinanceTransaction(formData: FormData) {
   const receiptReference = String(formData.get("receipt_reference") ?? "").trim();
   if (!transactionId || !amountCents || description.length < 3 || description.length > 1000 || receiptReference.length > 500) return invalid;
   const result = await context.db.from("club_finance_transactions").update({ amount_cents: amountCents, description, receipt_reference: receiptReference || null, updated_by: context.user.id, updated_at: new Date().toISOString() }).eq("id", transactionId).eq("club_id", clubId).select("id").maybeSingle();
-  if (result.error || !result.data) return { ok: false, message: "The ledger entry could not be updated. Apply finance_permissions_and_reimbursements.sql." };
+  if (result.error || !result.data) return { ok: false, message: "The ledger entry could not be updated. Apply supabase/schema.sql." };
   revalidatePath(`/clubs/manage/${clubId}/finance`);
   return { ok: true, message: "Ledger amount and details updated; the audit log retains the change." };
 }
@@ -142,7 +142,7 @@ export async function submitReimbursement(formData: FormData) {
     if (attachments.error) {
       await context.db.from("club_reimbursements").delete().eq("id", reimbursementId).eq("submitted_by", context.user.id).eq("status", "pending");
       await context.db.storage.from("club-receipts").remove(uploaded.map(item => item.storage_path));
-      return { ok: false, message: "Attachment records could not be saved. Apply finance_permissions_and_reimbursements.sql." };
+      return { ok: false, message: "Attachment records could not be saved. Apply supabase/schema.sql." };
     }
   }
   revalidatePath(`/clubs/manage/${clubId}/finance`);

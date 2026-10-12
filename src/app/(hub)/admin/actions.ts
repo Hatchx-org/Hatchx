@@ -44,7 +44,7 @@ export async function saveAnnouncementDraft(input: { key: string; title: string;
   if (title.length > 120 || body.length > 10000 || publishAt === undefined || pinnedUntil === undefined || expiresAt === undefined || !audience || !["normal","important","urgent","emergency"].includes(input.priority) || !announcementTags.includes(input.tag as (typeof announcementTags)[number])) return { ok: false, message: "Draft exceeds the allowed length or has invalid publication settings." };
   const db = await createServerClient();
   const { error } = await db.from("announcement_drafts").upsert({ user_id: user.id, draft_key: input.key, title, tag: input.tag, body, publish_at: publishAt, priority: input.priority as "normal" | "important" | "urgent" | "emergency", pinned_until: pinnedUntil, expires_at: expiresAt, ...audience, notify_in_app: input.notifyInApp, notify_email: input.notifyInApp && input.notifyEmail, updated_at: new Date().toISOString() });
-  return error ? { ok: false, message: "Draft could not be saved. Apply announcement_audience_notifications.sql." } : { ok: true, message: "Draft saved." };
+  return error ? { ok: false, message: "Draft could not be saved. Apply supabase/schema.sql." } : { ok: true, message: "Draft saved." };
 }
 
 function invalid(): ActionState {
@@ -103,7 +103,7 @@ export async function createAnnouncement(
     published: true,
   }).select("id").maybeSingle();
 
-  if (error || !created) return { ok: false, message: "Could not publish. Apply announcement_audience_notifications.sql after the earlier announcement migrations." };
+  if (error || !created) return { ok: false, message: "Could not publish. Apply supabase/schema.sql after the earlier announcement migrations." };
   if (!publishAt || new Date(publishAt).getTime() <= Date.now()) await supabase.rpc("dispatch_due_announcement_notifications", { p_announcement_id: created.id });
   await supabase.from("announcement_drafts").delete().eq("user_id", user.id).eq("draft_key", "new");
 
@@ -267,7 +267,7 @@ export async function updateUserRole(_prev: ActionState, formData: FormData): Pr
 
   if (error) return invalid();
   const gradeResult = await supabase.rpc("set_profile_grade", { p_user_id: id, p_grade_level: gradeLevel });
-  if (gradeResult.error) return { ok: false, message: "Role saved, but grade requires announcement_audience_notifications.sql." };
+  if (gradeResult.error) return { ok: false, message: "Role saved, but grade requires supabase/schema.sql." };
 
   revalidatePath("/admin/users");
   revalidatePath("/admin");
@@ -282,7 +282,7 @@ export async function setTeacherPermissions(_prev: ActionState, formData: FormDa
   if (!id || permissions.some(value => !teacherPermissions.includes(value as (typeof teacherPermissions)[number]))) return invalid();
   const db = await createServerClient();
   const { error } = await db.rpc("set_teacher_permissions", { p_profile_id: id, p_permissions: permissions });
-  if (error) return { ok: false, message: "Permissions could not be saved. Apply teacher_permissions.sql first." };
+  if (error) return { ok: false, message: "Permissions could not be saved. Apply supabase/schema.sql first." };
   revalidatePath("/admin/users");
   return { ok: true, message: "Teacher permissions updated." };
 }
@@ -295,7 +295,7 @@ export async function setTeacherClubs(_prev: ActionState, formData: FormData): P
   if (!id || clubIds.some(value => !/^[0-9a-f-]{36}$/i.test(value))) return invalid();
   const db = await createServerClient();
   const { error } = await db.rpc("set_teacher_clubs", { p_profile_id: id, p_club_ids: clubIds });
-  if (error) return { ok: false, message: "Club assignments could not be saved. Apply teacher_permissions.sql first." };
+  if (error) return { ok: false, message: "Club assignments could not be saved. Apply supabase/schema.sql first." };
   revalidatePath("/admin/users");
   revalidatePath("/clubs/manage");
   return { ok: true, message: clubIds.length ? clubIds.length + " Club assignment" + (clubIds.length === 1 ? "" : "s") + " saved." : "All Club assignments removed." };
@@ -413,7 +413,7 @@ export async function deleteOpportunity(_prev: ActionState, formData: FormData):
   return { ok: true, message: "Opportunity deleted." };
 }
 
-const eventTypes = ["school", "club", "sports", "festival", "spirit_week", "other"] as const;
+const eventTypes = ["school", "club", "sports", "festival", "other"] as const;
 
 function eventInput(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
@@ -440,7 +440,7 @@ export async function createCalendar(_prev: ActionState, formData: FormData): Pr
   if (name.length < 2 || name.length > 80 || description.length > 500 || !/^#[0-9a-f]{6}$/i.test(color)) return { ok: false, message: "Check the calendar name, description, and color." };
   const db = await createServerClient();
   const { error } = await db.from("calendar_sources").insert({ name, description: description || null, color, active: true, created_by: user.id });
-  if (error) return { ok: false, message: error.code === "23505" ? "A calendar with that name already exists." : "Calendar could not be created. Apply announcement_calendar_enhancements.sql." };
+  if (error) return { ok: false, message: error.code === "23505" ? "A calendar with that name already exists." : "Calendar could not be created. Apply supabase/schema.sql." };
   revalidatePath("/admin/events"); revalidatePath("/announcements");
   return { ok: true, message: "Calendar created." };
 }
@@ -494,7 +494,7 @@ export async function importCalendarCsv(_prev: ActionState, formData: FormData):
   }
   const { error } = await db.from("events").insert(payload);
   if (error) return { ok: false, message: "Import failed. No events were added." };
-  revalidatePath("/admin/events"); revalidatePath("/events", "layout"); revalidatePath("/announcements"); revalidatePath("/");
+  revalidatePath("/admin/events"); revalidatePath("/calendar", "layout"); revalidatePath("/announcements"); revalidatePath("/");
   return { ok: true, message: `${payload.length} events imported.` };
 }
 
@@ -509,8 +509,8 @@ export async function saveEvent(_prev: ActionState, formData: FormData): Promise
   const result = id
     ? await db.from("events").update({ ...input, updated_at: new Date().toISOString() }).eq("id", id)
     : await db.from("events").insert({ ...input, club_id: null, created_by: user.id });
-  if (result.error) return { ok: false, message: result.error.code === "42703" || result.error.code === "23514" ? "Apply calendar_meeting_emergency.sql, then check the meeting impact fields." : "Event could not be saved." };
-  revalidatePath("/admin/events"); revalidatePath("/events", "layout"); revalidatePath("/calendar"); revalidatePath("/");
+  if (result.error) return { ok: false, message: result.error.code === "42703" || result.error.code === "23514" ? "Apply supabase/schema.sql, then check the meeting impact fields." : "Event could not be saved." };
+  revalidatePath("/admin/events"); revalidatePath("/calendar", "layout"); revalidatePath("/");
   return { ok: true, message: id ? "Event updated." : "Event created." };
 }
 
@@ -522,6 +522,6 @@ export async function deleteEvent(_prev: ActionState, formData: FormData): Promi
   const db = await createServerClient();
   const { data, error } = await db.from("events").delete().eq("id", id).is("club_id", null).select("id").maybeSingle();
   if (error || !data) return { ok: false, message: "Only standalone school events can be deleted here." };
-  revalidatePath("/admin/events"); revalidatePath("/events", "layout"); revalidatePath("/calendar"); revalidatePath("/");
+  revalidatePath("/admin/events"); revalidatePath("/calendar", "layout"); revalidatePath("/");
   return { ok: true, message: "Event deleted." };
 }

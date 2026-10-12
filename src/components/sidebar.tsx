@@ -32,7 +32,7 @@ export const mainNavItems: NavItem[] = [
   { href: "/", label: "Home", icon: HomeIcon },
   { href: "/announcements", label: "Updates & Calendar", icon: MegaphoneIcon, sub: [
     { href: "/announcements", label: "Latest Updates" },
-    { href: "/announcements?view=calendar", label: "School Calendar" },
+    { href: "/calendar", label: "School Calendar" },
     { href: "/announcements?view=schedule", label: "Bell Schedule" },
     { href: "/announcements/submit", label: "Submit for Review" },
   ] },
@@ -46,8 +46,6 @@ export const mainNavItems: NavItem[] = [
       { href: "/clubs/manage", label: "Manage My Clubs" },
       { href: "/clubs/apply", label: "Apply for a New Club" },
       { href: "/sports", label: "Sports" },
-      { href: "/events", label: "Events" },
-      { href: "/spirit-week", label: "Spirit Week" },
     ],
   },
   {
@@ -100,7 +98,7 @@ export const adminNavItems: NavItem[] = [
 export function isNavItemActive(pathname: string, item: NavItem) {
   if (item.href === "/") return pathname === "/";
   if (item.href === "/clubs") {
-    return pathname.startsWith("/clubs") || pathname.startsWith("/events") || pathname === "/sports" || pathname === "/spirit-week";
+    return pathname.startsWith("/clubs") || pathname === "/sports";
   }
   return pathname.startsWith(item.href);
 }

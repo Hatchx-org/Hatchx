@@ -58,7 +58,7 @@ export default async function AdminClubsPage({
       {!configured && (
         <div className="mb-6 rounded-card border border-orange/30 bg-orange/10 p-4 text-sm leading-6 text-ink">
           <strong>Supabase is not configured.</strong> Apply{" "}
-          <code className="font-mono text-xs">supabase/admin_crud.sql</code> in the Supabase
+          <code className="font-mono text-xs">supabase/schema.sql</code> in the Supabase
           SQL Editor to review applications from the live queue.
         </div>
       )}

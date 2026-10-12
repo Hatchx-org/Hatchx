@@ -11,7 +11,7 @@ import type { TeacherPermission } from "@/lib/permissions";
 const primaryItems = [
   { href: "/", label: "Home", icon: HomeIcon },
   { href: "/clubs", label: "Clubs", icon: ClubsIcon },
-  { href: "/announcements", label: "Updates", icon: CalendarIcon },
+  { href: "/calendar", label: "Calendar", icon: CalendarIcon },
   { href: "/opportunities", label: "Explore", icon: OpportunitiesIcon },
 ];
 

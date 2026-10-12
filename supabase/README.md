@@ -1,36 +1,26 @@
-# Supabase database setup
+# Supabase setup
+
+The database setup is intentionally kept to three SQL files.
 
 ## Brand-new project
 
-1. Create a new Supabase project and wait for database provisioning to finish.
-2. Open **SQL Editor → New query**.
-3. Run `npm run db:bundle`, then execute the generated `supabase/bootstrap.sql` once. It contains every required migration in the dependency order defined by [`migration-order.json`](./migration-order.json).
-4. Do not run `production_compatibility.sql` on a new project. Do not run `demo_clubs.sql` in production.
-5. Configure Authentication URLs for the new website domain; no hostname needs to be changed in SQL.
+1. Create a Supabase project.
+2. Open **SQL Editor → New query** and run [`schema.sql`](./schema.sql) once.
+3. Copy the project URL and publishable key into `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+4. In **Authentication → URL Configuration**, set the Site URL to the new production domain and add:
+   - `https://YOUR-DOMAIN/auth/callback`
+   - `https://YOUR-DOMAIN/auth/confirm`
+5. Set `NEXT_PUBLIC_SITE_URL=https://YOUR-DOMAIN` in the hosting environment.
 
-Regenerate the bundle after changing any source migration:
+The SQL is domain-neutral; changing domains never requires editing the schema.
 
-```bash
-npm run db:bundle
-npm run check:migrations
-```
+## Other files
 
-The validator fails when a SQL file is unclassified, missing from disk, or appears more than once in the manifest. The generated bundle is intentionally ignored by Git and should be rebuilt immediately before use.
+- [`upgrade-existing.sql`](./upgrade-existing.sql): compatibility upgrade for the original legacy database only. Back up the database before running it.
+- [`demo.sql`](./demo.sql): optional local/demo Club records. Do not run it in production.
 
-## Existing project
+Run `npm run check:migrations` before deployment to validate the SQL files for unsafe grants, incomplete transactions, and missing `search_path` protection on security-definer functions.
 
-Do not run the full bootstrap against an existing database. Back up the database and follow [`docs/SUPABASE_SETUP.md`](../docs/SUPABASE_SETUP.md), applying only migrations that have not already been installed. `production_compatibility.sql` is reserved for upgrading the original legacy schema.
+## Domain checklist
 
-## New website domain
-
-The database scripts are domain-neutral. For a new domain such as `https://portal.example.edu`, update:
-
-- Vercel: `NEXT_PUBLIC_SITE_URL=https://portal.example.edu`
-- Supabase → Authentication → URL Configuration → Site URL
-- Supabase Redirect URLs:
-  - `https://portal.example.edu/auth/callback`
-  - `https://portal.example.edu/auth/confirm`
-- Google OAuth keeps the Supabase callback: `https://<project-ref>.supabase.co/auth/v1/callback`
-- `VAPID_SUBJECT` and allowed school email domains if those values also change
-
-Keep the old production callback temporarily during a domain transition so existing email links and sessions are not cut off prematurely.
+Set `NEXT_PUBLIC_SITE_URL` without a trailing slash. During a domain change, keep the old callback URLs temporarily in Supabase until outstanding email links have expired. Google OAuth continues to use the Supabase callback URL (`https://PROJECT-REF.supabase.co/auth/v1/callback`), not the website callback.

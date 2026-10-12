@@ -25,8 +25,8 @@ function missingMediaProcessingSchema(error: { code?: string; message?: string }
 }
 function mediaUploadErrorMessage(error: { message?: string } | null) {
   const message = error?.message ?? "";
-  if (/bucket.*not found|not found.*bucket/i.test(message)) return "Media storage is not configured. Apply club_governance.sql, then try again.";
-  if (/row-level security|unauthorized|permission/i.test(message)) return "Your Club media storage permission is missing. Apply the latest club_governance.sql policies, then sign in again.";
+  if (/bucket.*not found|not found.*bucket/i.test(message)) return "Media storage is not configured. Apply supabase/schema.sql, then try again.";
+  if (/row-level security|unauthorized|permission/i.test(message)) return "Your Club media storage permission is missing. Apply the latest supabase/schema.sql policies, then sign in again.";
   if (/payload|too large|maximum/i.test(message)) return "The optimized photo is still too large for storage. Crop closer or choose a smaller image.";
   return "Image upload failed. Check the Club media Storage bucket and policies, then try again.";
 }
@@ -109,7 +109,7 @@ export async function updateClubAppearance(formData: FormData) {
   const accent = String(formData.get("profile_accent_color") ?? "").toLowerCase();
   if (!isHexColor(background) || !isHexColor(accent)) return { ok: false, message: "Choose two valid colors." };
   const { data, error } = await context.supabase.from("clubs").update({ profile_background_color: background, profile_accent_color: accent }).eq("id", clubId).select("slug").maybeSingle();
-  if (error || !data) return { ok: false, message: "Background could not be saved. Apply club_profile_appearance.sql first." };
+  if (error || !data) return { ok: false, message: "Background could not be saved. Apply supabase/schema.sql first." };
   revalidatePath(`/clubs/${data.slug}`);
   revalidatePath(`/clubs/manage/${clubId}`);
   return { ok: true, message: "Club profile background updated." };
@@ -171,7 +171,7 @@ export async function createAttendanceSession(formData: FormData) {
       revalidatePath(`/clubs/manage/${clubId}`);
       return { ok: true, message: `${startsAtTime > now + 60_000 ? "Scheduled" : codeType === "temporary" ? "Temporary" : "Permanent"} check-in code created.` };
     }
-    if (["42703", "PGRST204"].includes(error.code)) return { ok: false, message: "Scheduled attendance requires attendance_scheduling.sql." };
+    if (["42703", "PGRST204"].includes(error.code)) return { ok: false, message: "Scheduled attendance requires supabase/schema.sql." };
     if (error.code !== "23505") return failed;
   }
   return { ok: false, message: "A unique code could not be generated. Please try again." };
@@ -238,7 +238,7 @@ export async function createClubInviteCode(formData: FormData) {
   for (let attempt = 0; attempt < 4; attempt += 1) {
     const { error } = await context.supabase.from("club_invite_codes").insert({ club_id: clubId, code: generateClubInviteCode(), label, expires_at: expiresAt?.toISOString() ?? null, max_uses: maxUses, created_by: context.user.id });
     if (!error) { revalidatePath(`/clubs/manage/${clubId}`); return { ok: true, message: "Registration invite code created." }; }
-    if (["42P01", "PGRST205"].includes(error.code)) return { ok: false, message: "Apply student_registration_invites.sql before creating invite codes." };
+    if (["42P01", "PGRST205"].includes(error.code)) return { ok: false, message: "Apply supabase/schema.sql before creating invite codes." };
     if (error.code !== "23505") return failed;
   }
   return { ok: false, message: "A unique invite code could not be generated. Try again." };
@@ -275,7 +275,7 @@ export async function inviteStudentToClub(formData: FormData) {
   const invitation = existing.data
     ? await context.supabase.from("club_member_invitations").update({ personal_message: personalMessage || null, expires_at: expiresAt, invited_by: context.user.id }).eq("id", existing.data.id).select("id").maybeSingle()
     : await context.supabase.from("club_member_invitations").insert({ club_id: clubId, email, personal_message: personalMessage || null, invited_by: context.user.id, expires_at: expiresAt }).select("id").maybeSingle();
-  if (!invitation.data) return { ok: false, message: "Apply club_member_email_invitations.sql before sending student invitations." };
+  if (!invitation.data) return { ok: false, message: "Apply supabase/schema.sql before sending student invitations." };
 
   const profile = await context.supabase.from("profiles").select("id,role").eq("email", email).maybeSingle();
   if (profile.data?.role === "student") {
@@ -476,12 +476,12 @@ export async function uploadOwnBoardAvatar(formData: FormData) {
     supabase.from("club_officers").select("id,club_id,profile_id,avatar_path").eq("id", officerId).eq("club_id", clubId).maybeSingle(),
     supabase.rpc("can_govern_club", { p_club_id: clubId }),
   ]);
-  if (officerError?.code === "42703") return { ok: false, message: "Board portraits require club_officer_avatars.sql." };
+  if (officerError?.code === "42703") return { ok: false, message: "Board portraits require supabase/schema.sql." };
   if (!officer || !officer.profile_id || (officer.profile_id !== user.id && canGovern !== true)) return { ok: false, message: "You may upload only your own board portrait." };
   const extension = ({ "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" } as Record<string, string>)[image.type];
   const storagePath = `${clubId}/${officer.profile_id}/${crypto.randomUUID()}.${extension}`;
   const upload = await supabase.storage.from("board-avatars").upload(storagePath, image, { contentType: image.type, upsert: false });
-  if (upload.error) return { ok: false, message: "Portrait upload failed. Apply club_officer_avatars.sql and check your board assignment." };
+  if (upload.error) return { ok: false, message: "Portrait upload failed. Apply supabase/schema.sql and check your board assignment." };
   const savedAvatar = await supabase.rpc("set_club_officer_avatar", { p_officer_id: officerId, p_avatar_path: storagePath });
   if (savedAvatar.error) {
     await supabase.storage.from("board-avatars").remove([storagePath]);
@@ -647,7 +647,7 @@ export async function uploadClubImage(formData: FormData) {
   // metadata row fails so an inaccessible orphan file is not retained.
   if (rowError) {
     const { error: cleanupError } = await context.supabase.storage.from("club-media").remove(uploaded);
-    return { ok: false, message: cleanupError ? "Photo metadata failed, and file cleanup failed. Contact Support before retrying." : "Photo metadata could not be saved. Apply club_media_processing.sql; uploaded files were removed." };
+    return { ok: false, message: cleanupError ? "Photo metadata failed, and file cleanup failed. Contact Support before retrying." : "Photo metadata could not be saved. Apply supabase/schema.sql; uploaded files were removed." };
   }
   if (isCover && insertedMedia) {
     const { data: previousCover } = await context.supabase.from("club_media").select("id").eq("club_id", clubId).eq("is_cover", true).neq("id", insertedMedia.id).maybeSingle();
@@ -663,7 +663,7 @@ export async function uploadClubImage(formData: FormData) {
   }
   revalidatePath(`/clubs/manage/${clubId}`);
   revalidatePath("/clubs", "layout");
-  if (compatibilityUpload) return { ok: true, message: "Photo uploaded in compatibility mode. Apply club_media_processing.sql to retain all sizes and permission records." };
+  if (compatibilityUpload) return { ok: true, message: "Photo uploaded in compatibility mode. Apply supabase/schema.sql to retain all sizes and permission records." };
   return { ok: true, message: isCover ? "Photo uploaded and set as the Club cover." : visibility === "gallery" ? "Photo uploaded to the public gallery." : "Photo uploaded privately to the media library." };
 }
 
@@ -696,7 +696,7 @@ export async function updateClubImagePlacement(formData: FormData) {
   }
   revalidatePath(`/clubs/manage/${clubId}`);
   revalidatePath("/clubs", "layout");
-  return { ok: true, message: compatibilityUpdate ? "Photo details saved in compatibility mode. Apply club_media_processing.sql to retain permission records." : "Photo details and permission record updated." };
+  return { ok: true, message: compatibilityUpdate ? "Photo details saved in compatibility mode. Apply supabase/schema.sql to retain permission records." : "Photo details and permission record updated." };
 }
 
 export async function deleteClubImage(formData: FormData) {

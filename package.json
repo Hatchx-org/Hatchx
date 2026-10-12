@@ -23,8 +23,7 @@
     "test:e2e:live": "HATCHX_E2E_LIVE=1 playwright test --grep @live",
     "security:dependencies": "node scripts/check-dependency-audit.mjs",
     "security:secrets": "node scripts/check-secrets.mjs",
-    "check:migrations": "node scripts/build-supabase-bootstrap.mjs --check && node scripts/check-migrations.mjs",
-    "db:bundle": "node scripts/build-supabase-bootstrap.mjs"
+    "check:migrations": "node scripts/check-migrations.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",

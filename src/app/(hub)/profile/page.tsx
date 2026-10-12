@@ -69,7 +69,7 @@ function SectionHeader({ title, action, href }: { title: string; action?: string
 }
 
 function EventRow({ event, attending }: { event: EventItem; attending: boolean }) {
-  return <Link href={`/events/${event.id}`} className="flex gap-3 rounded-control border border-line bg-card p-3 transition hover:border-powder/60"><span className="flex size-11 shrink-0 items-center justify-center rounded-control bg-navy text-xs font-bold text-cream">{event.dateISO?.slice(-2) ?? "•"}</span><span className="min-w-0 flex-1"><strong className="block truncate text-sm text-ink">{event.title}</strong><small className="mt-1 block truncate text-xs text-muted">{event.date} · {event.time} · {event.location}</small></span>{attending ? <span className="self-center rounded-full bg-powder/20 px-2.5 py-1 text-[10px] font-bold text-ink">GOING</span> : null}</Link>;
+  return <Link href={`/calendar/${event.id}`} className="flex gap-3 rounded-control border border-line bg-card p-3 transition hover:border-powder/60"><span className="flex size-11 shrink-0 items-center justify-center rounded-control bg-navy text-xs font-bold text-cream">{event.dateISO?.slice(-2) ?? "•"}</span><span className="min-w-0 flex-1"><strong className="block truncate text-sm text-ink">{event.title}</strong><small className="mt-1 block truncate text-xs text-muted">{event.date} · {event.time} · {event.location}</small></span>{attending ? <span className="self-center rounded-full bg-powder/20 px-2.5 py-1 text-[10px] font-bold text-ink">GOING</span> : null}</Link>;
 }
 
 export default async function ProfilePage() {

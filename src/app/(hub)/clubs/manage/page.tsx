@@ -34,7 +34,7 @@ export default async function ManageClubsPage() {
   if (user.role === "student" && !clubs?.length) {
     const shortcuts = [
       { title: "My joined clubs", description: "See the Clubs you belong to and your membership status.", href: "/profile#clubs", icon: ClubsIcon },
-      { title: "My activities", description: "Check upcoming meetings, events, and dates in one calendar.", href: "/announcements?view=calendar", icon: CalendarIcon },
+      { title: "My activities", description: "Check upcoming meetings, events, and dates in one calendar.", href: "/calendar", icon: CalendarIcon },
       { title: "Quick check-in", description: "Enter an attendance code when you arrive at a Club activity.", href: "/clubs/check-in", icon: UserIcon },
     ];
     return (

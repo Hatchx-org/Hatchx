@@ -44,6 +44,6 @@ export async function reviewWorkflow(fd: FormData) {
   } else return { ok: false, message: "Unknown workflow." };
   if (error) return { ok: false, message: "Decision could not be saved." };
   revalidatePath("/admin/workflows");
-  revalidatePath("/events", "layout");
+  revalidatePath("/calendar", "layout");
   return { ok: true, message: "Decision saved." };
 }

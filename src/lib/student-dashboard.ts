@@ -25,7 +25,7 @@ export const getStudentDashboard = cache(async (): Promise<StudentDashboard | nu
     throw new Error(`Home dashboard could not be loaded: ${dashboardResult.error.message}`);
   }
 
-  // Compatibility path for deployments that have not applied home_dashboard.sql yet.
+  // Compatibility path for deployments that have not applied supabase/schema.sql yet.
   const [membershipsResult, applicationsResult, supportResult, managedResult] = await Promise.all([
     supabase.from("club_memberships").select("club_id, status").eq("profile_id", user.id).in("status", ["active", "pending"]),
     supabase.from("club_applications").select("id", { count: "exact", head: true }).eq("submitted_by", user.id).eq("status", "pending"),

@@ -20,7 +20,7 @@ export default async function StudentInvitationPanel({ clubId }: { clubId: strin
     <p className="text-xs font-bold uppercase tracking-[0.16em] text-powder">Recruiting</p>
     <h2 id="student-invitations-title" className="mt-1 text-xl font-bold text-ink">Invite a new student</h2>
     <p className="mt-2 text-sm leading-6 text-muted">Send the student an introduction with this Club’s meeting details and social links. If they have not registered, Hatchx will add them automatically when they create an account with the same school email.</p>
-    {invitationResult.error ? <p role="alert" className="mt-4 rounded-control border border-orange/40 bg-content-bg p-3 text-sm text-muted">Apply <code>club_member_email_invitations.sql</code> to enable email invitations.</p> : <>
+    {invitationResult.error ? <p role="alert" className="mt-4 rounded-control border border-orange/40 bg-content-bg p-3 text-sm text-muted">Apply <code>supabase/schema.sql</code> to enable email invitations.</p> : <>
       <ActionFeedbackForm action={inviteStudentToClub} className="mt-4 grid gap-3">
         <input type="hidden" name="club_id" value={clubId} />
         <label className="text-sm font-medium text-ink">Student school email<input type="email" name="email" required pattern="[^@\s]+@nycstudents\.net" placeholder="student@nycstudents.net" className={`${input} mt-1`} /></label>

@@ -16,7 +16,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "",
     "/announcements",
     "/clubs",
-    "/events",
+    "/calendar",
     "/sports",
     "/opportunities",
     "/opportunities/all",
@@ -30,7 +30,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const details = [
     ...announcements.map((item) => `/announcements/${item.id}`),
     ...clubs.map((item) => `/clubs/${item.slug}`),
-    ...events.map((item) => `/events/${item.id}`),
+    ...events.map((item) => `/calendar/${item.id}`),
     ...opportunities.map((item) => `/opportunities/${item.id}`),
   ];
   return [...paths, ...details].map((path) => ({ url: `${origin}${path}` }));

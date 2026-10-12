@@ -191,10 +191,13 @@ alter table public.events
   alter column published set not null,
   alter column updated_at set not null;
 
+delete from public.events
+where event_type not in ('school', 'club', 'sports', 'festival', 'other');
+
 alter table public.events
   drop constraint if exists events_event_type_check,
   add constraint events_event_type_check
-    check (event_type in ('school', 'club', 'sports', 'festival', 'spirit_week', 'other')),
+    check (event_type in ('school', 'club', 'sports', 'festival', 'other')),
   drop constraint if exists events_time_order_check,
   add constraint events_time_order_check
     check (end_at is null or end_at >= start_at);

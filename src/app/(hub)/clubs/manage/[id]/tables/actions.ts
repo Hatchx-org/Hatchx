@@ -14,10 +14,10 @@ const columnTypes = new Set<ClubCustomColumn["type"]>(["text","long_text","numbe
 function customTableError(error: { code?: string | null; message?: string | null } | null, operation: "create" | "update") {
   if (!error) return `Table could not be ${operation === "create" ? "created" : "updated"}.`;
   if (error.code === "23505") return "This Club already has a table with that name.";
-  if (["42P01", "PGRST205"].includes(error.code ?? "")) return "Custom forms are not installed in the database. Apply supabase/club_custom_tables.sql.";
-  if (["42703", "PGRST204"].includes(error.code ?? "")) return "The Custom forms schema is out of date. Reapply club_custom_tables.sql, then club_custom_tables_enhancements.sql.";
+  if (["42P01", "PGRST205"].includes(error.code ?? "")) return "Custom forms are not installed in the database. Apply supabase/schema.sql.";
+  if (["42703", "PGRST204"].includes(error.code ?? "")) return "The Custom forms schema is out of date. Reapply supabase/schema.sql, then supabase/schema.sql.";
   if (error.code === "42501") return "Your account can open this Club but cannot save forms. Ask an Admin to verify the Club assignment and Custom forms policies.";
-  if (error.code === "23514") return "One or more question types are not supported by the current database schema. Apply supabase/club_custom_tables_enhancements.sql and try again.";
+  if (error.code === "23514") return "One or more question types are not supported by the current database schema. Apply supabase/schema.sql and try again.";
   return `Table could not be ${operation === "create" ? "created" : "updated"} (database code ${error.code ?? "unknown"}).`;
 }
 
@@ -36,7 +36,7 @@ export async function createCustomFormLink(form: FormData) {
   const table=await tableFor(current,clubId,tableId); if(!table.data)return {ok:false,message:"Form was not found."};
   const token=randomBytes(24).toString("base64url"); const tokenHash=createHash("sha256").update(token).digest("hex");
   const result=await current.db.from("club_custom_form_links").insert({table_id:tableId,token_hash:tokenHash,expires_at:expiresAt?.toISOString()??null,active:true,created_by:current.user.id});
-  if(result.error)return {ok:false,message:"Share link could not be created. Apply club_custom_forms_sharing.sql first."};
+  if(result.error)return {ok:false,message:"Share link could not be created. Apply supabase/schema.sql first."};
   revalidatePath(`/clubs/manage/${clubId}/tables/${tableId}`);
   return {ok:true,message:"Share link created.",url:`/forms/${token}`};
 }
@@ -125,7 +125,7 @@ export async function updateCustomTableRow(form: FormData) {
   const table=await tableFor(current,clubId,tableId); if(!table.data)return {ok:false,message:"Table was not found."};
   const parsed=rowData(table.data.columns,key=>form.get(key)); if("error" in parsed)return {ok:false,message:parsed.error ?? "Check the row values."};
   const result=await current.db.from("club_custom_table_rows").update({data:parsed.data,updated_by:current.user.id}).eq("id",rowId).eq("table_id",tableId).select("id").maybeSingle();
-  if(result.error||!result.data)return {ok:false,message:"Row could not be updated. Apply club_custom_tables_enhancements.sql first."}; revalidatePath(`/clubs/manage/${clubId}/tables/${tableId}`); return {ok:true,message:"Row updated."};
+  if(result.error||!result.data)return {ok:false,message:"Row could not be updated. Apply supabase/schema.sql first."}; revalidatePath(`/clubs/manage/${clubId}/tables/${tableId}`); return {ok:true,message:"Row updated."};
 }
 
 export async function importCustomTableCsv(form: FormData) {

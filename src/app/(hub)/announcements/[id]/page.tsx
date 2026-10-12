@@ -38,7 +38,7 @@ export default async function AnnouncementDetailPage({ params }: { params: Promi
 
       {related.length ? <section className="mt-10" aria-labelledby="related-announcements"><div className="flex items-end justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-powder">Keep reading</p><h2 id="related-announcements" className="mt-1 font-display text-2xl font-bold uppercase text-ink">More announcements</h2></div><Link href="/announcements" className="text-sm font-semibold text-navy">View all →</Link></div><div className="mt-4 grid gap-3 lg:grid-cols-2">{related.map((item) => <AnnouncementCard key={item.id} a={item} />)}</div></section> : null}
 
-      <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-6 text-sm"><Link href="/announcements" className="font-semibold text-powder hover:text-ink">← Back to announcements</Link><div className="flex gap-4"><Link href="/announcements?view=calendar" className="font-semibold text-muted hover:text-ink">Calendar</Link><Link href="/announcements/archive" className="font-semibold text-muted hover:text-ink">Archive</Link></div></div>
+      <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-6 text-sm"><Link href="/announcements" className="font-semibold text-powder hover:text-ink">← Back to announcements</Link><div className="flex gap-4"><Link href="/calendar" className="font-semibold text-muted hover:text-ink">Calendar</Link><Link href="/announcements/archive" className="font-semibold text-muted hover:text-ink">Archive</Link></div></div>
     </div>
   );
 }

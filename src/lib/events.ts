@@ -22,7 +22,7 @@ function mapEvent(row: EventRow, calendars = new Map<string, CalendarSourceRow>(
   return {
     id: normalizeRecordId(row.id),
     title: row.title,
-    category: row.event_type === "sports" ? "sports" : row.event_type === "spirit_week" ? "spirit-week" : "events",
+    category: row.event_type === "sports" ? "sports" : "events",
     date: formatDate(row.start_at, row.end_at),
     dateISO: row.start_at.slice(0, 10),
     dateEndISO: row.end_at?.slice(0, 10),

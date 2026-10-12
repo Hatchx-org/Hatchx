@@ -50,6 +50,6 @@ export default function SiteTextForm({ field, value, label, help, rows = 3, opti
     <button type="submit" disabled={pending} className="justify-self-start rounded-full bg-cream px-5 py-2 text-navy disabled:opacity-50">{pending ? "Saving…" : "Publish or schedule"}</button>
     {message && <p role="status" aria-live="polite" className="text-xs">{message}</p>}
   </form>
-  <details className="mt-4 border-t border-line pt-3"><summary className="cursor-pointer text-xs font-semibold text-navy">Version history &amp; restore</summary><div className="mt-2">{versions?.length ? versions.map((version) => <RestoreVersion key={version.id} field={field} version={version} />) : <p className="text-xs text-muted">No versions yet. Apply site_cms_workflow.sql.</p>}</div></details>
+  <details className="mt-4 border-t border-line pt-3"><summary className="cursor-pointer text-xs font-semibold text-navy">Version history &amp; restore</summary><div className="mt-2">{versions?.length ? versions.map((version) => <RestoreVersion key={version.id} field={field} version={version} />) : <p className="text-xs text-muted">No versions yet. Apply supabase/schema.sql.</p>}</div></details>
   </div>;
 }

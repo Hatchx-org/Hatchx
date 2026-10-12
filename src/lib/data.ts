@@ -184,14 +184,6 @@ export type Announcement = {
 
 export const announcements: Announcement[] = [
   {
-    id: "spirit-week",
-    title: "Spirit Week",
-    tag: "Events",
-    date: "Mon, Nov 17",
-    excerpt:
-      "Spirit Week is a time to show off our SCHOOL SPIRIT! Each day of the week is filled with something different.",
-  },
-  {
     id: "fall-reminders",
     title: "Fall Semester Reminders",
     tag: "Announcements",
@@ -212,7 +204,7 @@ export const announcements: Announcement[] = [
 export type EventItem = {
   id: string;
   title: string;
-  category: "events" | "sports" | "spirit-week";
+  category: "events" | "sports";
   date: string;
   /** Machine-readable date (YYYY-MM-DD). `dateEndISO` marks multi-day events. */
   dateISO?: string;
@@ -273,18 +265,6 @@ export const events: EventItem[] = [
     location: "Gymnasium A",
     price: "Free",
     description: "Spring season sign-ups open. View all sport tryout and meeting dates.",
-  },
-  {
-    id: "sw1",
-    title: "Spirit Week 2026",
-    category: "spirit-week",
-    date: "Mon–Fri, Nov 16–20, 2026",
-    dateISO: "2026-11-16",
-    dateEndISO: "2026-11-20",
-    time: "All Day",
-    location: "Throughout the school",
-    price: "Free",
-    description: "Spirit Week is a time to show off our SCHOOL SPIRIT! Each day of the week is filled with something different.",
   },
   {
     id: "e3",

@@ -22,7 +22,7 @@ export default async function AdminEventsPage() {
 
   return <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
     <PageHeader title="Calendar control center" subtitle="Add an event in seconds, then search and edit everything from one page."/>
-    {calendarResult.error ? <p role="alert" className="mt-6 rounded-card border border-orange/40 bg-card p-5 text-sm">Custom calendars require <code>announcement_calendar_enhancements.sql</code>.</p> : null}
+    {calendarResult.error ? <p role="alert" className="mt-6 rounded-card border border-orange/40 bg-card p-5 text-sm">Custom calendars require <code>supabase/schema.sql</code>.</p> : null}
     {error ? <p role="alert" className="mt-6 rounded-card border border-orange/40 bg-card p-5">Events could not be loaded. Verify the core platform migration and Staff access.</p> : <div className="mt-7 grid gap-6">
       <section className="rounded-card border border-line bg-card p-5 sm:p-6">
         <div className="mb-5 flex flex-wrap items-end justify-between gap-2"><div><h2 className="text-xl font-bold text-ink">Quick add</h2><p className="mt-1 text-sm text-muted">Only the name and start time are required.</p></div><span className="rounded-full bg-content-bg px-3 py-1 text-xs font-semibold text-muted">New events are public by default</span></div>

@@ -100,17 +100,15 @@ export function EventCard({ event }: { event: EventItem }) {
   const chip =
     event.category === "sports"
       ? "bg-orange/90 text-black"
-      : event.category === "spirit-week"
-        ? "bg-peach text-black"
-        : "bg-sky/90 text-black";
+      : "bg-sky/90 text-black";
   return (
     <Link
-      href={`/events/${event.id}`}
+      href={`/calendar/${event.id}`}
       className={`card-gradient group relative flex min-h-[360px] flex-col overflow-hidden rounded-[34px_34px_10px_10px] border p-7 text-center transition-transform duration-200 hover:-translate-y-1 ${event.meetingEffect ? "border-red-500 ring-2 ring-red-500/25" : "border-line"}`}
     >
       <p className="line-clamp-2 text-xs font-semibold leading-5 text-cream/85">{event.description}</p>
       <div className={`mx-auto mt-3 inline-flex w-fit rounded-full px-4 py-1 text-xs font-semibold ${event.meetingEffect ? "bg-red-600 text-white" : chip}`}>
-        {event.meetingEffect ? "No meetings" : event.category === "sports" ? "Sports" : event.category === "spirit-week" ? "Spirit Week" : "Events"}
+        {event.meetingEffect ? "No meetings" : event.category === "sports" ? "Sports" : "Calendar"}
       </div>
       <h3 className="mt-3 font-display text-xl font-bold uppercase leading-snug text-cream">{event.title}</h3>
       <p className="mt-2 text-xs font-semibold uppercase leading-5 text-cream">{event.date} · {event.meetingEffect === "club" && event.affectedClubName ? `${event.affectedClubName} cancelled` : event.meetingEffect === "all" ? "All Club meetings cancelled" : `${event.location} · ${event.time}`}</p>

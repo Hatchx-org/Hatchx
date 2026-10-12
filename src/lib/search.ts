@@ -45,7 +45,7 @@ export async function getSearchResults(query: string, limit = 24): Promise<Searc
     ...events.filter((event) => isEventUpcoming(event)).map((event) => ({
       kind: "Event" as const,
       title: event.title,
-      href: `/events/${event.id}`,
+      href: `/calendar/${event.id}`,
       meta: event.date,
       keywords: `${event.description} ${event.location} ${event.category}`,
     })),

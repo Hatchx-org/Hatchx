@@ -5,11 +5,10 @@ import { CalendarIcon, MegaphoneIcon, SearchIcon } from "@/components/icons";
 import { getAnnouncementTags, getAnnouncementsPage } from "@/lib/announcements";
 import { getEvents } from "@/lib/events";
 import { isEventUpcoming } from "@/lib/data";
-import CalendarBoard from "../calendar/calendar-board";
 
 export default async function AnnouncementsPage({ searchParams }: { searchParams: Promise<{ tag?: string; page?: string; q?: string; view?: string }> }) {
   const { tag, page: rawPage, q = "", view: rawView } = await searchParams;
-  const view = rawView === "calendar" || rawView === "schedule" ? rawView : "updates";
+  const view = rawView === "schedule" ? rawView : "updates";
   const page = Number.parseInt(rawPage ?? "1", 10);
   const query = q.trim().slice(0, 80);
   const [tagsFromDb, events] = await Promise.all([getAnnouncementTags(), getEvents()]);
@@ -29,7 +28,7 @@ export default async function AnnouncementsPage({ searchParams }: { searchParams
       <nav aria-label="Updates and calendar sections" className="sticky top-0 z-20 mb-6 grid w-full grid-cols-3 gap-1 overflow-hidden rounded-[18px] border border-line bg-card/95 p-2 shadow-sm backdrop-blur-xl sm:static sm:w-fit sm:gap-2">
         {([
           { value: "updates", label: "Updates", href: "/announcements" },
-          { value: "calendar", label: "Calendar", href: "/announcements?view=calendar" },
+          { value: "calendar", label: "Calendar", href: "/calendar" },
           { value: "schedule", label: "Bell Schedule", href: "/announcements?view=schedule" },
         ] as const).map((item) => <Link key={item.value} href={item.href} aria-current={view === item.value ? "page" : undefined} className={`min-w-0 whitespace-nowrap rounded-xl px-1 py-2.5 text-center text-xs font-bold sm:px-5 sm:text-sm ${view === item.value ? "bg-navy text-cream" : "text-muted hover:bg-content-bg hover:text-ink"}`}>{item.label}</Link>)}
       </nav>
@@ -61,16 +60,11 @@ export default async function AnnouncementsPage({ searchParams }: { searchParams
         </main>
 
         <aside className="space-y-4">
-          <section className="rounded-[18px] border border-line bg-card p-5 shadow-sm"><div className="flex items-center justify-between gap-3"><h2 className="font-bold text-ink">Coming up</h2><Link href="/announcements?view=calendar" className="text-xs font-bold text-navy">Full calendar →</Link></div><div className="mt-3 divide-y divide-line">{upcoming.length ? upcoming.map((event) => <Link key={event.id} href={`/events/${event.id}`} className={`flex gap-3 py-3 first:pt-0 ${event.meetingEffect ? "text-red-700" : ""}`}><time className={`w-12 shrink-0 text-xs font-bold uppercase ${event.meetingEffect ? "text-red-700" : "text-navy"}`}>{event.dateISO ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(`${event.dateISO}T00:00:00`)) : "TBA"}</time><span className="min-w-0"><span className="block truncate text-sm font-semibold">{event.meetingEffect ? "NO MEETINGS · " : ""}{event.title}</span><span className="mt-0.5 block truncate text-xs text-muted">{event.meetingEffect === "club" && event.affectedClubName ? `${event.affectedClubName} meeting cancelled` : event.meetingEffect === "all" ? "All Club meetings cancelled" : `${event.time} · ${event.location}`}</span></span></Link>) : <p className="py-3 text-sm text-muted">No upcoming events.</p>}</div></section>
+          <section className="rounded-[18px] border border-line bg-card p-5 shadow-sm"><div className="flex items-center justify-between gap-3"><h2 className="font-bold text-ink">Coming up</h2><Link href="/calendar" className="text-xs font-bold text-navy">Full calendar →</Link></div><div className="mt-3 divide-y divide-line">{upcoming.length ? upcoming.map((event) => <Link key={event.id} href={`/calendar/${event.id}`} className={`flex gap-3 py-3 first:pt-0 ${event.meetingEffect ? "text-red-700" : ""}`}><time className={`w-12 shrink-0 text-xs font-bold uppercase ${event.meetingEffect ? "text-red-700" : "text-navy"}`}>{event.dateISO ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(`${event.dateISO}T00:00:00`)) : "TBA"}</time><span className="min-w-0"><span className="block truncate text-sm font-semibold">{event.meetingEffect ? "NO MEETINGS · " : ""}{event.title}</span><span className="mt-0.5 block truncate text-xs text-muted">{event.meetingEffect === "club" && event.affectedClubName ? `${event.affectedClubName} meeting cancelled` : event.meetingEffect === "all" ? "All Club meetings cancelled" : `${event.time} · ${event.location}`}</span></span></Link>) : <p className="py-3 text-sm text-muted">No upcoming events.</p>}</div></section>
           <section className="rounded-[18px] border border-line bg-card p-5 shadow-sm"><h2 className="font-bold text-ink">Quick actions</h2><div className="mt-3 grid gap-2"><Link href="/announcements?view=schedule" className="flex items-center gap-3 rounded-control bg-content-bg p-3 text-sm font-semibold text-ink"><CalendarIcon className="size-5 text-navy" />View bell schedule</Link><Link href="/announcements/archive" className="flex items-center gap-3 rounded-control bg-content-bg p-3 text-sm font-semibold text-ink"><MegaphoneIcon className="size-5 text-navy" />Search the archive</Link><a href="/calendar.ics" className="flex items-center gap-3 rounded-control bg-content-bg p-3 text-sm font-semibold text-ink"><CalendarIcon className="size-5 text-navy" />Add calendar to phone</a></div></section>
           <section className="rounded-[18px] border border-line bg-card p-5 shadow-sm"><h2 className="font-bold text-ink">How this works</h2><ul className="mt-3 space-y-2 text-sm leading-6 text-muted"><li>• The feed opens with unread announcements only.</li><li>• Open or mark an announcement as read to remove it from the default feed.</li><li>• Read and saved status stays on this device.</li><li>• School-wide submissions are reviewed before publishing.</li></ul><Link href="/announcements/submit" className="mt-4 inline-flex text-sm font-bold text-navy">Submit for review →</Link></section>
         </aside>
       </div></> : null}
-
-      {view === "calendar" ? <section id="calendar" className="mt-7" aria-labelledby="calendar-title">
-        <div className="mb-4"><p className="text-xs font-bold uppercase tracking-[0.18em] text-powder">Plan ahead</p><h2 id="calendar-title" className="mt-1 text-2xl font-bold text-ink">School calendar</h2></div>
-        <CalendarBoard events={events} />
-      </section> : null}
 
       {view === "schedule" ? <div className="mt-7"><BellSchedule /></div> : null}
     </div>

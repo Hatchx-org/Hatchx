@@ -177,7 +177,7 @@ export default function ClubChat({
       ) : null}
 
       {!moderationReady ? (
-        <div className="border-t border-white/10 p-5"><p role="alert" className="rounded-[14px] border border-[#f78660]/40 bg-[#f78660]/10 p-4 text-sm leading-6 text-cream">Chat safety controls are awaiting database setup. An Admin must apply <code>chat_safety_moderation.sql</code> before anyone can post.</p></div>
+        <div className="border-t border-white/10 p-5"><p role="alert" className="rounded-[14px] border border-[#f78660]/40 bg-[#f78660]/10 p-4 text-sm leading-6 text-cream">Chat safety controls are awaiting database setup. An Admin must apply <code>supabase/schema.sql</code> before anyone can post.</p></div>
       ) : !agreed ? (
         <div className="border-t border-white/10 p-5 sm:p-6">
           <p className="text-xs font-bold uppercase tracking-[.18em] text-powder">Before your first message</p>

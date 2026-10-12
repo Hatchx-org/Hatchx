@@ -593,7 +593,7 @@ export type EventRow = {
   id: string;
   title: string;
   description: string;
-  event_type: "school" | "club" | "sports" | "festival" | "spirit_week" | "other";
+  event_type: "school" | "club" | "sports" | "festival" | "other";
   club_id: string | null;
   start_at: string;
   end_at: string | null;
