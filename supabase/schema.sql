@@ -864,9 +864,11 @@ create policy "Participants add support updates" on public.support_request_updat
 
 -- Existing announcement administration now includes staff, while role changes stay admin-only.
 drop policy if exists "Admins manage announcements" on public.announcements;
+drop policy if exists "Staff manage announcements" on public.announcements;
 create policy "Staff manage announcements" on public.announcements for all
   using (public.is_staff_or_admin()) with check (public.is_staff_or_admin());
 drop policy if exists "Admins review applications" on public.club_applications;
+drop policy if exists "Staff review applications" on public.club_applications;
 create policy "Staff review applications" on public.club_applications for all
   using (public.is_staff_or_admin()) with check (public.is_staff_or_admin());
 
@@ -1042,16 +1044,19 @@ as $$
 $$;
 
 drop policy if exists "Managers manage club officers" on public.club_officers;
+drop policy if exists "Governors manage club officers" on public.club_officers;
 create policy "Governors manage club officers" on public.club_officers for all
   using (public.can_govern_club(club_id))
   with check (public.can_govern_club(club_id));
 
 drop policy if exists "Managers manage club advisors" on public.club_advisors;
+drop policy if exists "Staff manage club advisors" on public.club_advisors;
 create policy "Staff manage club advisors" on public.club_advisors for all
   using (public.is_staff_or_admin())
   with check (public.is_staff_or_admin());
 
 drop policy if exists "Managers review membership" on public.club_memberships;
+drop policy if exists "Governors review membership" on public.club_memberships;
 create policy "Governors review membership" on public.club_memberships for update
   using (public.can_govern_club(club_id))
   with check (public.can_govern_club(club_id));
@@ -3876,6 +3881,10 @@ drop policy if exists "Club managers read custom tables" on public.club_custom_t
 drop policy if exists "Club managers create custom tables" on public.club_custom_tables;
 drop policy if exists "Club managers update custom tables" on public.club_custom_tables;
 drop policy if exists "Club managers delete custom tables" on public.club_custom_tables;
+drop policy if exists "Board reads custom tables" on public.club_custom_tables;
+drop policy if exists "Board creates custom tables" on public.club_custom_tables;
+drop policy if exists "Board updates custom tables" on public.club_custom_tables;
+drop policy if exists "Board deletes custom tables" on public.club_custom_tables;
 create policy "Board reads custom tables" on public.club_custom_tables for select using(public.can_manage_club_forms(club_id));
 create policy "Board creates custom tables" on public.club_custom_tables for insert with check(public.can_manage_club_forms(club_id) and created_by=auth.uid());
 create policy "Board updates custom tables" on public.club_custom_tables for update using(public.can_manage_club_forms(club_id)) with check(public.can_manage_club_forms(club_id));
@@ -3885,6 +3894,10 @@ drop policy if exists "Club managers read custom rows" on public.club_custom_tab
 drop policy if exists "Club managers create custom rows" on public.club_custom_table_rows;
 drop policy if exists "Club managers update custom rows" on public.club_custom_table_rows;
 drop policy if exists "Club managers delete custom rows" on public.club_custom_table_rows;
+drop policy if exists "Board reads custom rows" on public.club_custom_table_rows;
+drop policy if exists "Board creates custom rows" on public.club_custom_table_rows;
+drop policy if exists "Board updates custom rows" on public.club_custom_table_rows;
+drop policy if exists "Board deletes custom rows" on public.club_custom_table_rows;
 create policy "Board reads custom rows" on public.club_custom_table_rows for select using(exists(select 1 from public.club_custom_tables t where t.id=table_id and public.can_manage_club_forms(t.club_id)));
 create policy "Board creates custom rows" on public.club_custom_table_rows for insert with check(created_by=auth.uid() and exists(select 1 from public.club_custom_tables t where t.id=table_id and public.can_manage_club_forms(t.club_id)));
 create policy "Board updates custom rows" on public.club_custom_table_rows for update using(exists(select 1 from public.club_custom_tables t where t.id=table_id and public.can_manage_club_forms(t.club_id))) with check(updated_by=auth.uid());
@@ -4348,6 +4361,18 @@ create table if not exists public.club_import_rows (
 );
 
 do $$ declare t text; begin foreach t in array array['election_candidates','election_ballots','permit_approvals','notifications','notification_outbox','club_import_batches','club_import_rows'] loop execute format('alter table public.%I enable row level security',t); end loop; end $$;
+drop policy if exists "Boards manage candidates" on public.election_candidates;
+drop policy if exists "Members view candidates" on public.election_candidates;
+drop policy if exists "Members cast ballots" on public.election_ballots;
+drop policy if exists "Voters view own ballot" on public.election_ballots;
+drop policy if exists "Permit participants read stages" on public.permit_approvals;
+drop policy if exists "Assigned approvers decide stage" on public.permit_approvals;
+drop policy if exists "Users read own notifications" on public.notifications;
+drop policy if exists "Users mark own notifications" on public.notifications;
+drop policy if exists "Admins manage notification delivery" on public.notification_outbox;
+drop policy if exists "Admins manage import batches" on public.club_import_batches;
+drop policy if exists "Admins manage import rows" on public.club_import_rows;
+drop policy if exists "Members submit own trip consent" on public.trip_consents;
 create policy "Boards manage candidates" on public.election_candidates for all using(exists(select 1 from public.club_elections e where e.id=election_id and public.can_manage_club(e.club_id))) with check(exists(select 1 from public.club_elections e where e.id=election_id and public.can_manage_club(e.club_id)));
 create policy "Members view candidates" on public.election_candidates for select using(exists(select 1 from public.club_elections e join public.club_memberships m on m.club_id=e.club_id where e.id=election_id and m.profile_id=auth.uid() and m.status='active'));
 create policy "Members cast ballots" on public.election_ballots for insert with check(voter_id=auth.uid() and exists(select 1 from public.club_elections e join public.club_memberships m on m.club_id=e.club_id where e.id=election_id and e.status='open' and e.results_locked_at is null and (e.opens_at is null or e.opens_at<=now()) and (e.closes_at is null or e.closes_at>now()) and m.profile_id=auth.uid() and m.status='active'));
@@ -4365,6 +4390,8 @@ insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types) v
  ('trip-consents','trip-consents',false,10485760,array['application/pdf','image/jpeg','image/png','image/webp']),
  ('club-receipts','club-receipts',false,10485760,array['application/pdf','image/jpeg','image/png','image/webp'])
 on conflict(id) do update set public=false,file_size_limit=excluded.file_size_limit,allowed_mime_types=excluded.allowed_mime_types;
+drop policy if exists "Consent owners upload documents" on storage.objects;
+drop policy if exists "Consent owners read documents" on storage.objects;
 create policy "Consent owners upload documents" on storage.objects for insert to authenticated with check(bucket_id='trip-consents' and (storage.foldername(name))[1]=auth.uid()::text);
 create policy "Consent owners read documents" on storage.objects for select to authenticated using(bucket_id='trip-consents' and ((storage.foldername(name))[1]=auth.uid()::text or public.is_staff_or_admin()));
 create policy "Club managers upload receipts" on storage.objects for insert to authenticated with check(bucket_id='club-receipts' and public.can_manage_club(((storage.foldername(name))[1])::uuid));
