@@ -9,6 +9,10 @@ alter table public.announcements
 -- Keep the original club-application columns for backwards compatibility while
 -- adding and backfilling the canonical columns used by the application.
 alter table public.club_applications
+  add column if not exists club_category text,
+  add column if not exists club_description text,
+  add column if not exists meeting_dates text,
+  add column if not exists "club_appsStatus" text,
   add column if not exists category text,
   add column if not exists description text,
   add column if not exists meeting_days text,
@@ -26,7 +30,7 @@ set
       else 'Other'
     end
   ),
-  description = coalesce(description, club_description),
+  description = coalesce(description, club_description, club_name, 'Club application'),
   meeting_days = coalesce(meeting_days, meeting_dates),
   status = coalesce(status, "club_appsStatus", 'pending');
 
@@ -45,6 +49,10 @@ alter table public.club_applications
 -- The original clubs table is retained and expanded in place. Legacy columns
 -- remain available, while new writes use the canonical columns below.
 alter table public.clubs
+  add column if not exists club_name text,
+  add column if not exists club_description text,
+  add column if not exists club_category text,
+  add column if not exists "club_memberCount" integer,
   add column if not exists slug text,
   add column if not exists name text,
   add column if not exists short_description text,
@@ -64,11 +72,11 @@ update public.clubs
 set
   slug = coalesce(
     slug,
-    trim(both '-' from regexp_replace(lower(club_name), '[^a-z0-9]+', '-', 'g'))
+    trim(both '-' from regexp_replace(lower(coalesce(name, club_name, 'club')), '[^a-z0-9]+', '-', 'g'))
       || '-' || left(id::text, 8)
   ),
-  name = coalesce(name, club_name),
-  short_description = coalesce(short_description, club_description),
+  name = coalesce(name, club_name, 'Club'),
+  short_description = coalesce(short_description, club_description, name, club_name, 'Club'),
   interest_tags = coalesce(interest_tags, array[coalesce(club_category, 'Other')]),
   is_stem = coalesce(is_stem, club_category = 'STEM'),
   is_community_service = coalesce(is_community_service, club_category = 'Community Service'),
@@ -151,6 +159,13 @@ create trigger clubs_sync_legacy_columns
 -- consumed by the Hub. Event RSVPs intentionally store event_id as text, so
 -- both legacy bigint IDs and UUID IDs from fresh installations are supported.
 alter table public.events
+  add column if not exists event_name text,
+  add column if not exists event_description text,
+  add column if not exists event_date date,
+  add column if not exists event_time time,
+  add column if not exists event_location text,
+  add column if not exists event_price text,
+  add column if not exists created_at timestamptz,
   add column if not exists title text,
   add column if not exists description text,
   add column if not exists event_type text,
@@ -171,7 +186,8 @@ set
   start_at = coalesce(
     start_at,
     (event_date + coalesce(event_time, time '00:00')) at time zone 'America/New_York',
-    created_at
+    created_at,
+    now()
   ),
   location = coalesce(location, event_location),
   price_label = coalesce(price_label, event_price, 'Free'),
