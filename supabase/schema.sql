@@ -4394,6 +4394,8 @@ drop policy if exists "Consent owners upload documents" on storage.objects;
 drop policy if exists "Consent owners read documents" on storage.objects;
 create policy "Consent owners upload documents" on storage.objects for insert to authenticated with check(bucket_id='trip-consents' and (storage.foldername(name))[1]=auth.uid()::text);
 create policy "Consent owners read documents" on storage.objects for select to authenticated using(bucket_id='trip-consents' and ((storage.foldername(name))[1]=auth.uid()::text or public.is_staff_or_admin()));
+drop policy if exists "Club managers upload receipts" on storage.objects;
+drop policy if exists "Club governors read receipts" on storage.objects;
 create policy "Club managers upload receipts" on storage.objects for insert to authenticated with check(bucket_id='club-receipts' and public.can_manage_club(((storage.foldername(name))[1])::uuid));
 create policy "Club governors read receipts" on storage.objects for select to authenticated using(bucket_id='club-receipts' and public.can_govern_club(((storage.foldername(name))[1])::uuid));
 

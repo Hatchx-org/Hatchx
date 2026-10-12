@@ -16,7 +16,7 @@ The SQL is domain-neutral; changing domains never requires editing the schema.
 
 ## Other files
 
-- [`upgrade-existing.sql`](./upgrade-existing.sql): compatibility upgrade for the original legacy database only. Back up the database before running it.
+- [`upgrade-existing.sql`](./upgrade-existing.sql): compatibility upgrade for the original pre-Hatchx database only. Back up the database before running it. Do not run this file on a new or partially installed project; rerun `schema.sql` instead.
 - [`demo.sql`](./demo.sql): optional local/demo Club records. Do not run it in production.
 
 Run `npm run check:migrations` before deployment to validate the SQL files for unsafe grants, incomplete transactions, and missing `search_path` protection on security-definer functions.

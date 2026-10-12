@@ -1,6 +1,6 @@
--- Bayside-Hub production compatibility migration
--- Apply before admin_crud.sql/member_actions.sql/security_hardening.sql/core_platform.sql
--- when upgrading the original dashboard-created schema.
+-- Hatchx legacy-database compatibility upgrade.
+-- Use this only when upgrading an existing pre-Hatchx database. For a new or
+-- partially installed Supabase project, rerun schema.sql instead.
 
 -- The original announcements table did not include archive state.
 alter table public.announcements
@@ -9,6 +9,7 @@ alter table public.announcements
 -- Keep the original club-application columns for backwards compatibility while
 -- adding and backfilling the canonical columns used by the application.
 alter table public.club_applications
+  add column if not exists club_name text,
   add column if not exists club_category text,
   add column if not exists club_description text,
   add column if not exists meeting_dates text,

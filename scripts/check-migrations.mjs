@@ -13,6 +13,27 @@ for (const file of files) {
   if (/\bbegin\s*;/i.test(sql) !== /\bcommit\s*;\s*$/i.test(sql)) failures.push(`${file}: transaction must have both BEGIN and final COMMIT`);
   const definitions = [...executable.matchAll(/security\s+definer([^$;]{0,180})/gi)];
   for (const definition of definitions) if (!/set\s+search_path/i.test(definition[0])) failures.push(`${file}: SECURITY DEFINER function is missing a fixed search_path near line ${sql.slice(0, definition.index).split("\n").length}`);
+
+  // Consolidated installs may be restarted after a statement fails. Every RLS
+  // policy must therefore be dropped before it is created, including policies
+  // that are redefined by a later section in the same file.
+  const policyState = new Map();
+  for (const match of executable.matchAll(/(drop\s+policy\s+if\s+exists|create\s+policy)\s+"([^"]+)"/gi)) {
+    const action = match[1].toLowerCase().startsWith("drop") ? "drop" : "create";
+    const name = match[2];
+    const state = policyState.get(name) ?? { dropped: false, exists: false };
+    if (action === "drop") {
+      state.dropped = true;
+      state.exists = false;
+    } else {
+      const line = sql.slice(0, match.index).split("\n").length;
+      if (!state.dropped) failures.push(`${file}: policy "${name}" is created without a preceding DROP POLICY IF EXISTS near line ${line}`);
+      if (state.exists) failures.push(`${file}: policy "${name}" is created twice without an intervening drop near line ${line}`);
+      state.exists = true;
+      state.dropped = false;
+    }
+    policyState.set(name, state);
+  }
 }
 if (failures.length) {
   console.error(`Migration checks failed:\n${failures.join("\n")}`);
