@@ -1,3 +1,4 @@
+
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -16,7 +17,9 @@ import type { ClubRow } from "@/lib/supabase/types";
 
 async function admin() {
   const user = await getCurrentUser();
-  return user?.role === "admin" ? { user, db: await createServerClient() } : null;
+  return user?.role === "admin"
+    ? { user, db: await createServerClient() }
+    : null;
 }
 
 function refreshDataPages() {
@@ -25,7 +28,6 @@ function refreshDataPages() {
   revalidatePath("/admin/data");
 }
 
-
 export async function importClubsCsv(formData: FormData) {
   const context = await admin();
   if (!context) {
@@ -33,8 +35,12 @@ export async function importClubsCsv(formData: FormData) {
   }
 
   const file = formData.get("csv");
+
   if (!(file instanceof File) || file.size > 1_000_000) {
-    return { ok: false, message: "Choose a CSV up to 1 MB." };
+    return {
+      ok: false,
+      message: "Choose a CSV file up to 1 MB.",
+    };
   }
 
   const parsed = parseCsv(await file.text());
@@ -47,14 +53,21 @@ export async function importClubsCsv(formData: FormData) {
   if (missing.length) {
     return {
       ok: false,
-      message: `Missing required column: ${missing.join(", ")}`,
+      message: `Missing required columns: ${missing.join(", ")}. The other columns are optional.`,
     };
   }
 
-  if (!parsed.length || parsed.length > 500) {
+  if (!parsed.length) {
     return {
       ok: false,
-      message: "CSV must contain 1–500 rows.",
+      message: "The CSV does not contain any Club rows.",
+    };
+  }
+
+  if (parsed.length > 500) {
+    return {
+      ok: false,
+      message: "Import at most 500 rows at once.",
     };
   }
 
@@ -68,6 +81,7 @@ export async function importClubsCsv(formData: FormData) {
   ).length;
 
   const errorRows = preview.length - validRows;
+
   const warningRows = preview.filter(
     (row) => row.warnings.length > 0
   ).length;
@@ -88,28 +102,30 @@ export async function importClubsCsv(formData: FormData) {
   if (!batch.data) {
     return {
       ok: false,
-      message: batch.error?.message ?? "Failed to create preview.",
+      message: "CSV preview could not be created. Confirm the Club import tables are installed.",
     };
   }
 
+  // Store non-blocking warnings inside the JSONB payload.
+  // No database migration is required.
   const savedRows = await context.db
     .from("club_import_rows")
     .insert(
       preview.map((row) => ({
-        batch_id: batch.data!.id,
         row_number: row.row_number,
         payload: {
           ...row.payload,
           _import_warnings: row.warnings,
         },
         errors: row.errors,
+        batch_id: batch.data!.id,
       }))
     );
 
   if (savedRows.error) {
     return {
       ok: false,
-      message: savedRows.error.message,
+      message: `The CSV preview could not be saved: ${savedRows.error.message}`,
     };
   }
 
@@ -119,14 +135,34 @@ export async function importClubsCsv(formData: FormData) {
     ok: true,
     message:
       `Preview ready: ${validRows} importable, ` +
-      `${warningRows} with notes, ` +
-      `${errorRows} blocking errors.`,
+      `${warningRows} with non-blocking notes, ` +
+      `${errorRows} blocking errors. ` +
+      "Nothing has been imported yet.",
   };
 }
 
+type DatabaseClient = Awaited<
+  ReturnType<typeof createServerClient>
+>;
+
+async function logRelatedRecord(
+  db: DatabaseClient,
+  batchId: string,
+  rowId: number,
+  entityType: "meeting" | "advisor" | "pending_advisor",
+  entityId: string
+) {
+  return db.from("club_import_related_records").insert({
+    batch_id: batchId,
+    import_row_id: rowId,
+    entity_type: entityType,
+    entity_id: entityId,
+  });
+}
 
 export async function applyClubImport(formData: FormData) {
   const context = await admin();
+
   if (!context) {
     return { ok: false, message: "Admin access required." };
   }
@@ -143,7 +179,8 @@ export async function applyClubImport(formData: FormData) {
   if (!batch.data || batch.data.error_rows > 0) {
     return {
       ok: false,
-      message: "Resolve blocking errors first. Notes are allowed.",
+      message:
+        "Resolve blocking preview errors before importing. Warnings are allowed.",
     };
   }
 
@@ -154,10 +191,16 @@ export async function applyClubImport(formData: FormData) {
     .order("row_number");
 
   if (rows.error) {
-    return { ok: false, message: rows.error.message };
+    return {
+      ok: false,
+      message: "Import rows could not be loaded.",
+    };
   }
 
-  async function stopAt(rowNumber: number, reason: string) {
+  async function stopAt(
+    rowNumber: number,
+    reason: string
+  ) {
     await context!.db
       .from("club_import_batches")
       .update({ status: "failed" })
@@ -166,8 +209,8 @@ export async function applyClubImport(formData: FormData) {
     return {
       ok: false,
       message:
-        `Import failed at row ${rowNumber}: ${reason}. ` +
-        "Earlier rows may have been saved.",
+        `Import stopped at CSV row ${rowNumber}: ${reason}. ` +
+        "Earlier rows may have been applied and can be rolled back.",
     };
   }
 
@@ -175,6 +218,8 @@ export async function applyClubImport(formData: FormData) {
 
   for (const row of rows.data ?? []) {
     const payload = row.payload as ClubRosterPayload;
+
+    // Invalid or irregular schedules do NOT block Club creation.
     const meetings = clubRosterMeetings(payload);
 
     const existing = await context.db
@@ -184,33 +229,46 @@ export async function applyClubImport(formData: FormData) {
       .maybeSingle();
 
     if (existing.error) {
-      return stopAt(row.row_number, existing.error.message);
+      return stopAt(
+        row.row_number,
+        existing.error.message
+      );
     }
 
     const clubValues: Partial<ClubRow> = existing.data
       ? {
           slug: payload.slug,
           name: payload.club,
-          category: payload.category ||
-            existing.data.category || null,
-          school_year: payload.school_year ||
-            existing.data.school_year || null,
+          category:
+            payload.category ||
+            existing.data.category ||
+            null,
+          school_year:
+            payload.school_year ||
+            existing.data.school_year ||
+            null,
           status: payload.status as
-            "draft" | "published" | "archived",
+            | "draft"
+            | "published"
+            | "archived",
         }
       : {
           slug: payload.slug,
           name: payload.club,
           short_description:
             payload.description ||
-            "Club information imported by administration.",
+            "Club information imported by the school administration.",
           category: payload.category || null,
           school_year: payload.school_year || null,
           status: payload.status as
-            "draft" | "published" | "archived",
+            | "draft"
+            | "published"
+            | "archived",
           created_by: context.user.id,
         };
 
+    // Use UPDATE for existing Clubs.
+    // An INSERT-style upsert could violate NOT NULL constraints.
     const saved = existing.data
       ? await context.db
           .from("clubs")
@@ -227,7 +285,7 @@ export async function applyClubImport(formData: FormData) {
     if (!saved.data) {
       return stopAt(
         row.row_number,
-        saved.error?.message ?? "Club could not be saved"
+        saved.error?.message ?? "Failed to save Club"
       );
     }
 
@@ -236,53 +294,74 @@ export async function applyClubImport(formData: FormData) {
     const tracked = await context.db
       .from("club_import_rows")
       .update({
-        before_state: existing.data as Record<string, unknown> | null,
+        before_state: existing.data as
+          | Record<string, unknown>
+          | null,
         club_id: clubId,
         action: existing.data ? "update" : "insert",
       })
       .eq("id", row.id);
 
     if (tracked.error) {
-      return stopAt(row.row_number, tracked.error.message);
+      return stopAt(
+        row.row_number,
+        tracked.error.message
+      );
     }
 
-    // Optional meetings: no schedule is also acceptable.
+    // Create meetings only when the DAY can be recognized.
+    // Custom periods can have NULL start/end times.
     for (const meeting of meetings) {
-      let query = context.db
+      let meetingQuery = context.db
         .from("club_meetings")
         .select("id")
         .eq("club_id", clubId)
         .eq("day_of_week", meeting.day_of_week);
 
-      query = meeting.start_time
-        ? query.eq("start_time", meeting.start_time)
-        : query.is("start_time", null);
+      meetingQuery = meeting.start_time
+        ? meetingQuery.eq(
+            "start_time",
+            meeting.start_time
+          )
+        : meetingQuery.is("start_time", null);
 
-      query = meeting.location
-        ? query.eq("location", meeting.location)
-        : query.is("location", null);
+      meetingQuery = meeting.location
+        ? meetingQuery.eq("location", meeting.location)
+        : meetingQuery.is("location", null);
 
-      query = meeting.recurrence_note
-        ? query.eq("recurrence_note", meeting.recurrence_note)
-        : query.is("recurrence_note", null);
+      meetingQuery = meeting.recurrence_note
+        ? meetingQuery.eq(
+            "recurrence_note",
+            meeting.recurrence_note
+          )
+        : meetingQuery.is("recurrence_note", null);
 
-      const existingMeeting = await query.limit(1).maybeSingle();
+      const existingMeeting = await meetingQuery
+        .limit(1)
+        .maybeSingle();
 
       if (existingMeeting.error) {
-        return stopAt(row.row_number, existingMeeting.error.message);
+        return stopAt(
+          row.row_number,
+          existingMeeting.error.message
+        );
       }
 
       if (!existingMeeting.data) {
         const inserted = await context.db
           .from("club_meetings")
-          .insert({ club_id: clubId, ...meeting })
+          .insert({
+            club_id: clubId,
+            ...meeting,
+          })
           .select("id")
           .maybeSingle();
 
         if (!inserted.data) {
           return stopAt(
             row.row_number,
-            inserted.error?.message ?? "Meeting could not be saved"
+            inserted.error?.message ??
+              "Failed to save Club meeting"
           );
         }
 
@@ -295,13 +374,16 @@ export async function applyClubImport(formData: FormData) {
         );
 
         if (logged.error) {
-          return stopAt(row.row_number, logged.error.message);
+          return stopAt(
+            row.row_number,
+            logged.error.message
+          );
         }
       }
     }
 
-    // Invalid emails are ignored for account claiming,
-    // not treated as failures for the Club.
+    // A missing/invalid Advisor email never blocks the Club.
+    // Do not associate an account with an invalid address.
     const email = payload.advisor_email;
 
     if (validAdvisorEmail(email)) {
@@ -312,7 +394,10 @@ export async function applyClubImport(formData: FormData) {
         .maybeSingle();
 
       if (profile.error) {
-        return stopAt(row.row_number, profile.error.message);
+        return stopAt(
+          row.row_number,
+          profile.error.message
+        );
       }
 
       const advisorName = (
@@ -324,38 +409,49 @@ export async function applyClubImport(formData: FormData) {
       if (advisorName.trim().length >= 2) {
         if (
           profile.data &&
-          ["teacher", "advisor"].includes(profile.data.role)
+          ["teacher", "advisor"].includes(
+            profile.data.role
+          )
         ) {
-          const oldAdvisor = await context.db
+          const existingAdvisor = await context.db
             .from("club_advisors")
             .select("id")
             .eq("club_id", clubId)
             .eq("profile_id", profile.data.id)
             .maybeSingle();
 
-          if (oldAdvisor.error) {
-            return stopAt(row.row_number, oldAdvisor.error.message);
+          if (existingAdvisor.error) {
+            return stopAt(
+              row.row_number,
+              existingAdvisor.error.message
+            );
           }
 
           const advisor = await context.db
             .from("club_advisors")
-            .upsert({
-              club_id: clubId,
-              profile_id: profile.data.id,
-              display_name: advisorName,
-              contact_email: email,
-            }, { onConflict: "club_id,profile_id" })
+            .upsert(
+              {
+                club_id: clubId,
+                profile_id: profile.data.id,
+                display_name: advisorName,
+                contact_email: email,
+              },
+              {
+                onConflict: "club_id,profile_id",
+              }
+            )
             .select("id")
             .maybeSingle();
 
           if (!advisor.data) {
             return stopAt(
               row.row_number,
-              advisor.error?.message ?? "Advisor could not be saved"
+              advisor.error?.message ??
+                "Failed to assign Advisor"
             );
           }
 
-          if (!oldAdvisor.data) {
+          if (!existingAdvisor.data) {
             const logged = await logRelatedRecord(
               context.db,
               batchId,
@@ -363,41 +459,54 @@ export async function applyClubImport(formData: FormData) {
               "advisor",
               advisor.data.id
             );
+
             if (logged.error) {
-              return stopAt(row.row_number, logged.error.message);
+              return stopAt(
+                row.row_number,
+                logged.error.message
+              );
             }
           }
         } else {
-          const oldPending = await context.db
+          const existingPending = await context.db
             .from("pending_club_advisors")
             .select("id")
             .eq("club_id", clubId)
             .eq("email", email)
             .maybeSingle();
 
-          if (oldPending.error) {
-            return stopAt(row.row_number, oldPending.error.message);
+          if (existingPending.error) {
+            return stopAt(
+              row.row_number,
+              existingPending.error.message
+            );
           }
 
           const pending = await context.db
             .from("pending_club_advisors")
-            .upsert({
-              club_id: clubId,
-              email,
-              display_name: advisorName,
-              created_by: context.user.id,
-            }, { onConflict: "club_id,email" })
+            .upsert(
+              {
+                club_id: clubId,
+                email,
+                display_name: advisorName,
+                created_by: context.user.id,
+              },
+              {
+                onConflict: "club_id,email",
+              }
+            )
             .select("id")
             .maybeSingle();
 
           if (!pending.data) {
             return stopAt(
               row.row_number,
-              pending.error?.message ?? "Pending Advisor could not be saved"
+              pending.error?.message ??
+                "Failed to save pending Advisor"
             );
           }
 
-          if (!oldPending.data) {
+          if (!existingPending.data) {
             const logged = await logRelatedRecord(
               context.db,
               batchId,
@@ -405,8 +514,12 @@ export async function applyClubImport(formData: FormData) {
               "pending_advisor",
               pending.data.id
             );
+
             if (logged.error) {
-              return stopAt(row.row_number, logged.error.message);
+              return stopAt(
+                row.row_number,
+                logged.error.message
+              );
             }
           }
         }
@@ -425,14 +538,297 @@ export async function applyClubImport(formData: FormData) {
     .eq("id", batchId);
 
   if (completed.error) {
-    return { ok: false, message: completed.error.message };
+    return {
+      ok: false,
+      message: completed.error.message,
+    };
   }
 
   refreshDataPages();
 
   return {
     ok: true,
-    message: `Imported ${count} CSV rows successfully.`,
+    message:
+      `Imported ${count} CSV rows. ` +
+      "Non-standard schedule and email values were kept " +
+      "in the import record rather than blocking Clubs.",
   };
 }
 
+export async function rollbackClubImport(
+  formData: FormData
+) {
+  const context = await admin();
+
+  if (!context) {
+    return {
+      ok: false,
+      message: "Admin access required.",
+    };
+  }
+
+  const batchId = String(
+    formData.get("batch_id") ?? ""
+  );
+
+  const batch = await context.db
+    .from("club_import_batches")
+    .select("id")
+    .eq("id", batchId)
+    .in("status", ["applied", "failed"])
+    .maybeSingle();
+
+  if (!batch.data) {
+    return {
+      ok: false,
+      message:
+        "Only applied or failed batches can be rolled back.",
+    };
+  }
+
+  const related = await context.db
+    .from("club_import_related_records")
+    .select("*")
+    .eq("batch_id", batchId)
+    .order("id", { ascending: false });
+
+  for (const record of related.data ?? []) {
+    if (record.entity_type === "meeting") {
+      await context.db
+        .from("club_meetings")
+        .delete()
+        .eq("id", record.entity_id);
+    }
+
+    if (record.entity_type === "advisor") {
+      await context.db
+        .from("club_advisors")
+        .delete()
+        .eq("id", record.entity_id);
+    }
+
+    if (record.entity_type === "pending_advisor") {
+      const pending = await context.db
+        .from("pending_club_advisors")
+        .select("club_id,claimed_profile_id")
+        .eq("id", record.entity_id)
+        .maybeSingle();
+
+      if (pending.data?.claimed_profile_id) {
+        await context.db
+          .from("club_advisors")
+          .delete()
+          .eq("club_id", pending.data.club_id)
+          .eq(
+            "profile_id",
+            pending.data.claimed_profile_id
+          );
+      }
+
+      await context.db
+        .from("pending_club_advisors")
+        .delete()
+        .eq("id", record.entity_id);
+    }
+  }
+
+  const rows = await context.db
+    .from("club_import_rows")
+    .select("*")
+    .eq("batch_id", batchId)
+    .order("row_number", { ascending: false });
+
+  for (const row of rows.data ?? []) {
+    if (!row.club_id) continue;
+
+    if (row.action === "insert") {
+      await context.db
+        .from("clubs")
+        .delete()
+        .eq("id", row.club_id);
+    } else if (row.before_state) {
+      await context.db
+        .from("clubs")
+        .update(
+          row.before_state as Partial<ClubRow>
+        )
+        .eq("id", row.club_id);
+    }
+  }
+
+  await context.db
+    .from("club_import_batches")
+    .update({
+      status: "rolled_back",
+      rolled_back_at: new Date().toISOString(),
+    })
+    .eq("id", batchId);
+
+  refreshDataPages();
+
+  return {
+    ok: true,
+    message:
+      "The imported Club, meeting, and Advisor changes were rolled back.",
+  };
+}
+
+export async function bulkUpdateClubs(
+  formData: FormData
+) {
+  const context = await admin();
+
+  if (!context) {
+    return {
+      ok: false,
+      message: "Admin access required.",
+    };
+  }
+
+  const ids = formData
+    .getAll("club_id")
+    .map(String)
+    .filter(Boolean)
+    .slice(0, 200);
+
+  if (
+    !ids.length ||
+    formData.get("confirm") !== "yes"
+  ) {
+    return {
+      ok: false,
+      message:
+        "Select Clubs and confirm the bulk change.",
+    };
+  }
+
+  const operation = String(
+    formData.get("operation") ?? ""
+  );
+
+  if (operation === "archive") {
+    await context.db
+      .from("clubs")
+      .update({ status: "archived" })
+      .in("id", ids);
+  } else if (operation === "category") {
+    await context.db
+      .from("clubs")
+      .update({
+        category:
+          String(formData.get("value") ?? "").trim() ||
+          null,
+      })
+      .in("id", ids);
+  } else if (operation === "year") {
+    await context.db
+      .from("clubs")
+      .update({
+        school_year:
+          String(formData.get("value") ?? "").trim() ||
+          null,
+      })
+      .in("id", ids);
+  } else if (operation === "advisor") {
+    const email = String(
+      formData.get("value") ?? ""
+    )
+      .trim()
+      .toLowerCase();
+
+    if (!validAdvisorEmail(email)) {
+      return {
+        ok: false,
+        message:
+          "Enter a valid Advisor email for bulk assignment.",
+      };
+    }
+
+    const profile = await context.db
+      .from("profiles")
+      .select("id,full_name,email,role")
+      .eq("email", email)
+      .maybeSingle();
+
+    if (profile.error) {
+      return {
+        ok: false,
+        message: profile.error.message,
+      };
+    }
+
+    if (
+      profile.data &&
+      ["teacher", "advisor"].includes(
+        profile.data.role
+      )
+    ) {
+      const { error } = await context.db
+        .from("club_advisors")
+        .upsert(
+          ids.map((club_id) => ({
+            club_id,
+            profile_id: profile.data!.id,
+            display_name:
+              profile.data!.full_name,
+            contact_email: profile.data!.email,
+          })),
+          {
+            onConflict: "club_id,profile_id",
+          }
+        );
+
+      if (error) {
+        return {
+          ok: false,
+          message: error.message,
+        };
+      }
+    } else {
+      const name = email
+        .split("@")[0]
+        .replace(/[._-]+/g, " ");
+
+      if (name.trim().length < 2) {
+        return {
+          ok: false,
+          message:
+            "Advisor name inferred from email is too short.",
+        };
+      }
+
+      const { error } = await context.db
+        .from("pending_club_advisors")
+        .upsert(
+          ids.map((club_id) => ({
+            club_id,
+            email,
+            display_name: name.slice(0, 120),
+            created_by: context.user.id,
+          })),
+          {
+            onConflict: "club_id,email",
+          }
+        );
+
+      if (error) {
+        return {
+          ok: false,
+          message: error.message,
+        };
+      }
+    }
+  } else {
+    return {
+      ok: false,
+      message: "Choose a bulk operation.",
+    };
+  }
+
+  refreshDataPages();
+
+  return {
+    ok: true,
+    message: `Updated ${ids.length} Clubs.`,
+  };
+}
