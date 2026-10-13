@@ -4092,6 +4092,8 @@ begin
   return new;
 end $$;
 revoke all on function public.validate_club_advisor_identity() from public,anon,authenticated;
+grant execute on function public.valid_club_tags(text[])
+to authenticated;
 
 -- Remove legacy rows that confused global Admin authority with Club Advisor identity.
 delete from public.club_advisors a using public.profiles p
