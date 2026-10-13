@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { leaveClub, replyToMembershipDecision } from "@/app/(hub)/clubs/actions";
+import SoNumberForm from "@/app/(hub)/profile/so-number-form";
 import { getCurrentUser } from "@/lib/auth";
 import { isEventUpcoming, type EventItem } from "@/lib/data";
 import { getEvents } from "@/lib/events";
@@ -10,7 +11,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import type { ClubApplicationRow, MyClubAttendance, SupportRequestRow } from "@/lib/supabase/types";
 
 type ProfileClub = { id: string; membershipId: string; slug: string; name: string; status: "pending" | "active" | "rejected" | "left"; requestedAt: string; rejectionReason: string | null; memberReply: string | null; role: string; meetingDay: string; location: string };
-type ProfileData = { clubs: ProfileClub[]; applications: ClubApplicationRow[]; rsvpIds: string[]; support: SupportRequestRow[]; attendance: MyClubAttendance[] };
+type ProfileData = { clubs: ProfileClub[]; applications: ClubApplicationRow[]; rsvpIds: string[]; support: SupportRequestRow[]; attendance: MyClubAttendance[]; soNumber: string };
 
 export const metadata: Metadata = { title: "My Hub" };
 export const dynamic = "force-dynamic";
@@ -26,10 +27,10 @@ function dateTime(value: string) {
 }
 
 async function getProfileData(userId: string): Promise<ProfileData> {
-  const empty: ProfileData = { clubs: [], applications: [], rsvpIds: [], support: [], attendance: [] };
+  const empty: ProfileData = { clubs: [], applications: [], rsvpIds: [], support: [], attendance: [], soNumber: "" };
   if (!isSupabaseConfigured()) return empty;
   const db = await createServerClient();
-  const [memberships, officers, advisors, meetings, applications, rsvps, support, attendance] = await Promise.all([
+  const [memberships, officers, advisors, meetings, applications, rsvps, support, attendance, profile] = await Promise.all([
     db.from("club_memberships").select("id, club_id, status, requested_at, rejection_reason, member_reply").eq("profile_id", userId).order("requested_at", { ascending: false }),
     db.from("club_officers").select("club_id, title").eq("profile_id", userId),
     db.from("club_advisors").select("club_id").eq("profile_id", userId),
@@ -38,6 +39,7 @@ async function getProfileData(userId: string): Promise<ProfileData> {
     db.from("event_rsvps").select("event_id").eq("user_id", userId),
     db.from("support_requests").select("*").eq("submitted_by", userId).order("updated_at", { ascending: false }).limit(5),
     db.rpc("get_my_club_attendance", { p_limit: 8 }),
+    db.from("profiles").select("so_number").eq("id", userId).maybeSingle(),
   ]);
   const membershipRows = memberships.data ?? [];
   const clubIds = [...new Set(membershipRows.map((row) => row.club_id))];
@@ -57,6 +59,7 @@ async function getProfileData(userId: string): Promise<ProfileData> {
     rsvpIds: (rsvps.data ?? []).map((row) => row.event_id),
     support: support.data ?? [],
     attendance: attendance.data ?? [],
+    soNumber: profile.data?.so_number ?? "",
   };
 }
 
@@ -107,7 +110,7 @@ export default async function ProfilePage() {
 
     <aside className="min-w-0 space-y-6"><section><SectionHeader title="Coming up" action="Full calendar" href="/calendar" /><div className="mt-4 space-y-2">{(myUpcoming.length ? myUpcoming : upcomingEvents).map((event) => <EventRow key={event.id} event={event} attending={rsvpSet.has(event.id)} />)}{!upcomingEvents.length ? <p className="rounded-card border border-dashed border-line bg-card p-5 text-sm text-muted">No upcoming events.</p> : null}</div></section>
       <section className="rounded-card border border-line bg-card p-5"><h2 className="font-display text-xl font-bold uppercase text-ink">Quick actions</h2><nav className="mt-4 grid grid-cols-2 gap-2" aria-label="Profile quick actions">{[{ href: "/clubs/check-in", label: "Check in", icon: "✓" }, { href: "/clubs", label: "Find a Club", icon: "＋" }, { href: "/calendar", label: "Calendar", icon: "○" }, { href: "/announcements", label: "Updates", icon: "↗" }, { href: "/clubs/apply", label: "Start a Club", icon: "✦" }, { href: "/support", label: "Get help", icon: "?" }].map((item) => <Link key={item.href} href={item.href} className="flex min-h-24 flex-col justify-between rounded-control border border-line bg-content-bg p-3 text-sm font-semibold text-ink transition hover:border-powder"><span className="text-xl text-powder">{item.icon}</span>{item.label}</Link>)}</nav>{canManage ? <Link href="/clubs/manage" className="mt-3 flex items-center justify-between rounded-control bg-navy px-4 py-3 text-sm font-bold text-cream"><span>Manage my Clubs</span><span>→</span></Link> : null}</section>
-      <section className="rounded-card border border-line bg-card p-5"><h2 className="text-sm font-bold text-ink">Account details</h2><dl className="mt-4 space-y-3 text-sm"><div><dt className="text-xs text-muted">School email</dt><dd className="mt-0.5 break-all font-medium text-ink">{user.email}</dd></div><div><dt className="text-xs text-muted">Access role</dt><dd className="mt-0.5 capitalize text-ink">{user.role}</dd></div></dl><div className="mt-4 flex gap-4 text-xs font-semibold text-muted"><Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link></div></section>
+      <section className="rounded-card border border-line bg-card p-5"><h2 className="text-sm font-bold text-ink">Account details</h2><dl className="mt-4 space-y-3 text-sm"><div><dt className="text-xs text-muted">School email</dt><dd className="mt-0.5 break-all font-medium text-ink">{user.email}</dd></div><div><dt className="text-xs text-muted">Access role</dt><dd className="mt-0.5 capitalize text-ink">{user.role}</dd></div></dl><SoNumberForm initialValue={data.soNumber} /><div className="mt-4 flex gap-4 text-xs font-semibold text-muted"><Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link></div></section>
     </aside></div>
   </div></div>;
 }

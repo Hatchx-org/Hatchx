@@ -2182,6 +2182,11 @@ alter table public.club_attendance_records add constraint club_attendance_record
 -- Attendance exports include the student's OSIS. This remains idempotent with
 -- the student registration section later in this consolidated schema.
 alter table public.profiles add column if not exists osis_number text;
+alter table public.profiles add column if not exists so_number text;
+alter table public.profiles drop constraint if exists profiles_so_number_check;
+alter table public.profiles add constraint profiles_so_number_check
+  check (so_number is null or char_length(btrim(so_number)) between 1 and 50);
+grant update (so_number) on table public.profiles to authenticated;
 
 alter table public.club_attendance_sessions enable row level security;
 alter table public.club_attendance_records enable row level security;
@@ -2280,6 +2285,7 @@ returns table (
   profile_id uuid,
   member_name text,
   osis_number text,
+  so_number text,
   checked_in_at timestamptz,
   comments text
 )
@@ -2300,6 +2306,7 @@ begin
     record.profile_id,
     coalesce(nullif(profile.full_name, ''), 'Club member'),
     profile.osis_number,
+    profile.so_number,
     record.checked_in_at,
     record.comments
   from public.club_attendance_records record

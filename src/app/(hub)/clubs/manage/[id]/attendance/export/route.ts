@@ -28,7 +28,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
   const lines = [
     ["First name and last name", "OSIS", "SO number (optional)", "Date", "Do you have any comments or concerns?"].map(csvCell).join(","),
-    ...(records ?? []).map((record) => [record.member_name, record.osis_number, "", attendanceDate(record.checked_in_at), record.comments].map(csvCell).join(",")),
+    ...(records ?? []).map((record) => [record.member_name, record.osis_number, record.so_number, attendanceDate(record.checked_in_at), record.comments].map(csvCell).join(",")),
   ];
   const filename = `${club.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "club"}-attendance.csv`;
   return new Response(`\uFEFF${lines.join("\r\n")}`, {

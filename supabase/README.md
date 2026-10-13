@@ -16,6 +16,7 @@ The SQL is domain-neutral; changing domains never requires editing the schema.
 
 ## Other files
 
+- [`attendance-comments-so-number.sql`](./attendance-comments-so-number.sql): standalone, idempotent upgrade for an existing Hatchx database. Run this file to add attendance comments and optional profile SO numbers without rerunning the full schema.
 - [`upgrade-existing.sql`](./upgrade-existing.sql): compatibility upgrade for the original pre-Hatchx database only. Back up the database before running it. Do not run this file on a new or partially installed project; rerun `schema.sql` instead.
 - [`demo.sql`](./demo.sql): optional local/demo Club records. Do not run it in production.
 

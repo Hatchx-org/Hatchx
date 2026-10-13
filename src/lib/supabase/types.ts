@@ -9,6 +9,7 @@ export type Profile = {
   role: Role;
   grade_level: number | null;
   osis_number: string | null;
+  so_number: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -567,6 +568,7 @@ export type ClubAttendanceRecordDetail = {
   profile_id: string;
   member_name: string;
   osis_number: string | null;
+  so_number: string | null;
   checked_in_at: string;
   comments: string | null;
 };
