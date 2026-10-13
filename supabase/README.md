@@ -22,6 +22,13 @@ The SQL is domain-neutral; changing domains never requires editing the schema.
 
 Run `npm run check:migrations` before deployment to validate the SQL files for unsafe grants, incomplete transactions, and missing `search_path` protection on security-definer functions.
 
+## Free-project availability and backups
+
+GitHub Actions workflows for read-only keepalive queries and encrypted weekly
+logical backups are documented in
+[`docs/supabase-free-operations.md`](../docs/supabase-free-operations.md). They do
+not require another SQL migration.
+
 ## Domain checklist
 
 Set `NEXT_PUBLIC_SITE_URL` without a trailing slash. During a domain change, keep the old callback URLs temporarily in Supabase until outstanding email links have expired. Google OAuth continues to use the Supabase callback URL (`https://PROJECT-REF.supabase.co/auth/v1/callback`), not the website callback.

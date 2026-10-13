@@ -1,0 +1,47 @@
+name: Supabase keepalive
+
+on:
+  schedule:
+    # Several database requests each day keep the rolling seven-day window active.
+    - cron: "17 3,11,19 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-keepalive
+  cancel-in-progress: false
+
+jobs:
+  ping-database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Query a public database table
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "Add SUPABASE_URL and SUPABASE_ANON_KEY as repository secrets."
+            exit 1
+          fi
+
+          response_file="$(mktemp)"
+          status="$({ curl --silent --show-error \
+            --output "$response_file" \
+            --write-out "%{http_code}" \
+            --header "apikey: $SUPABASE_ANON_KEY" \
+            --header "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            --header "Accept: application/json" \
+            "$SUPABASE_URL/rest/v1/site_content?select=key&limit=1"; } || true)"
+
+          if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+            echo "Supabase database query failed with HTTP $status."
+            sed -n '1,20p' "$response_file"
+            exit 1
+          fi
+
+          echo "Supabase database query succeeded with HTTP $status."
