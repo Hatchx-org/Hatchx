@@ -13,6 +13,9 @@ for (const file of files) {
   if (/\bbegin\s*;/i.test(sql) !== /\bcommit\s*;\s*$/i.test(sql)) failures.push(`${file}: transaction must have both BEGIN and final COMMIT`);
   const definitions = [...executable.matchAll(/security\s+definer([^$;]{0,180})/gi)];
   for (const definition of definitions) if (!/set\s+search_path/i.test(definition[0])) failures.push(`${file}: SECURITY DEFINER function is missing a fixed search_path near line ${sql.slice(0, definition.index).split("\n").length}`);
+  for (const digestCall of executable.matchAll(/(?<!extensions\.)\bdigest\s*\(/gi)) {
+    failures.push(`${file}: pgcrypto digest must be schema-qualified as extensions.digest near line ${sql.slice(0, digestCall.index).split("\n").length}`);
+  }
 
   // Consolidated installs may be restarted after a statement fails. Every RLS
   // policy must therefore be dropped before it is created, including policies
