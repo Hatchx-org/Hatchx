@@ -4,7 +4,14 @@ import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth";
 import { createServerClient } from "@/lib/supabase/server";
 import { parseCsv } from "@/lib/csv";
-import { CLUB_ROSTER_REQUIRED_HEADERS, clubRosterMeeting, normalizeClubRosterHeaders, parseClubRosterRow, type ClubRosterPayload } from "@/lib/club-roster-import";
+import {
+  CLUB_ROSTER_REQUIRED_HEADERS,
+  clubRosterMeetings,
+  normalizeClubRosterHeaders,
+  parseClubRosterRow,
+  validAdvisorEmail,
+  type ClubRosterPayload,
+} from "@/lib/club-roster-import";
 import type { ClubRow } from "@/lib/supabase/types";
 
 async function admin() {
