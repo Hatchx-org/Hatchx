@@ -11,9 +11,11 @@ export async function checkIn(_previous: CheckInState, formData: FormData): Prom
   if (!user) return { ok: false, message: "Sign in with your student account before checking in." };
   if (!isSupabaseConfigured()) return { ok: false, message: "Check-in is not available yet." };
   const code = String(formData.get("code") ?? "").trim().toUpperCase();
+  const comments = String(formData.get("comments") ?? "").trim();
   if (!/^[A-Z0-9]{8}$/.test(code)) return { ok: false, message: "Enter the 8-character code shown by your Club organizer." };
+  if (comments.length > 1000) return { ok: false, message: "Comments must be 1,000 characters or fewer." };
   const supabase = await createServerClient();
-  const { data, error } = await supabase.rpc("check_in_to_club", { p_code: code });
+  const { data, error } = await supabase.rpc("check_in_to_club", { p_code: code, p_comments: comments || null });
   const result = data?.[0];
   if (error || !result) return { ok: false, message: "Check-in could not be completed. Please ask the organizer to verify the code." };
   return { ok: ["checked_in", "already_checked_in"].includes(result.result), message: result.message, activity: result.session_label, clubSlug: result.club_slug };

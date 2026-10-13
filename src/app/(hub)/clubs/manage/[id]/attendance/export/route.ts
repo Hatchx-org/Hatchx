@@ -2,8 +2,12 @@ import { getCurrentUser } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createServerClient } from "@/lib/supabase/server";
 
-function csvCell(value: string) {
-  return `"${value.replaceAll('"', '""')}"`;
+function csvCell(value: string | null | undefined) {
+  return `"${(value ?? "").replaceAll('"', '""')}"`;
+}
+
+function attendanceDate(value: string) {
+  return new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(value));
 }
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -23,8 +27,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!club || error) return new Response("Attendance records could not be exported", { status: 500 });
 
   const lines = [
-    ["Activity", "Member", "Checked in at"].map(csvCell).join(","),
-    ...(records ?? []).map((record) => [record.session_label, record.member_name, record.checked_in_at].map(csvCell).join(",")),
+    ["First name and last name", "OSIS", "SO number (optional)", "Date", "Do you have any comments or concerns?"].map(csvCell).join(","),
+    ...(records ?? []).map((record) => [record.member_name, record.osis_number, "", attendanceDate(record.checked_in_at), record.comments].map(csvCell).join(",")),
   ];
   const filename = `${club.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "club"}-attendance.csv`;
   return new Response(`\uFEFF${lines.join("\r\n")}`, {

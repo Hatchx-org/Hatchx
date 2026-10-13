@@ -2170,8 +2170,18 @@ create table if not exists public.club_attendance_records (
   club_id uuid not null references public.clubs (id) on delete cascade,
   profile_id uuid not null references public.profiles (id) on delete cascade,
   checked_in_at timestamptz not null default now(),
+  comments text check (comments is null or char_length(comments) <= 1000),
   unique (session_id, profile_id)
 );
+
+alter table public.club_attendance_records add column if not exists comments text;
+alter table public.club_attendance_records drop constraint if exists club_attendance_records_comments_check;
+alter table public.club_attendance_records add constraint club_attendance_records_comments_check
+  check (comments is null or char_length(comments) <= 1000);
+
+-- Attendance exports include the student's OSIS. This remains idempotent with
+-- the student registration section later in this consolidated schema.
+alter table public.profiles add column if not exists osis_number text;
 
 alter table public.club_attendance_sessions enable row level security;
 alter table public.club_attendance_records enable row level security;
@@ -2195,7 +2205,8 @@ create policy "Members read own attendance" on public.club_attendance_records fo
   using (profile_id = auth.uid() or public.can_manage_club(club_id));
 
 -- Code redemption is atomic and does not expose active codes to members.
-create or replace function public.check_in_to_club(p_code text)
+drop function if exists public.check_in_to_club(text);
+create or replace function public.check_in_to_club(p_code text, p_comments text default null)
 returns table (result text, message text, club_slug text, session_label text)
 language plpgsql
 security definer set search_path = public
@@ -2206,6 +2217,11 @@ declare
 begin
   if auth.uid() is null then
     return query select 'unauthenticated', 'Sign in before checking in.', null::text, null::text;
+    return;
+  end if;
+
+  if char_length(coalesce(p_comments, '')) > 1000 then
+    return query select 'invalid', 'Comments must be 1,000 characters or fewer.', null::text, null::text;
     return;
   end if;
 
@@ -2233,13 +2249,18 @@ begin
     return;
   end if;
 
-  insert into public.club_attendance_records (session_id, club_id, profile_id)
-  values (target.id, target.club_id, auth.uid())
+  insert into public.club_attendance_records (session_id, club_id, profile_id, comments)
+  values (target.id, target.club_id, auth.uid(), nullif(btrim(p_comments), ''))
   on conflict (session_id, profile_id) do nothing;
 
   if found then
     return query select 'checked_in', 'Check-in complete.', target_slug, target.label;
   else
+    if nullif(btrim(p_comments), '') is not null then
+      update public.club_attendance_records
+      set comments = nullif(btrim(p_comments), '')
+      where session_id = target.id and profile_id = auth.uid();
+    end if;
     return query select 'already_checked_in', 'You are already checked in for this activity.', target_slug, target.label;
   end if;
 end;
@@ -2247,6 +2268,7 @@ $$;
 
 -- Managers can review a minimal roster without receiving member email
 -- addresses or unrelated profile fields.
+drop function if exists public.get_club_attendance_records(uuid, integer);
 create or replace function public.get_club_attendance_records(
   p_club_id uuid,
   p_limit integer default 1000
@@ -2257,7 +2279,9 @@ returns table (
   session_label text,
   profile_id uuid,
   member_name text,
-  checked_in_at timestamptz
+  osis_number text,
+  checked_in_at timestamptz,
+  comments text
 )
 language plpgsql
 stable
@@ -2275,7 +2299,9 @@ begin
     session.label,
     record.profile_id,
     coalesce(nullif(profile.full_name, ''), 'Club member'),
-    record.checked_in_at
+    profile.osis_number,
+    record.checked_in_at,
+    record.comments
   from public.club_attendance_records record
   join public.club_attendance_sessions session on session.id = record.session_id
   join public.profiles profile on profile.id = record.profile_id
@@ -2302,8 +2328,8 @@ begin
 end;
 $$;
 
-revoke all on function public.check_in_to_club(text) from public, anon;
-grant execute on function public.check_in_to_club(text) to authenticated;
+revoke all on function public.check_in_to_club(text, text) from public, anon;
+grant execute on function public.check_in_to_club(text, text) to authenticated;
 revoke all on function public.get_club_attendance_records(uuid, integer) from public, anon;
 grant execute on function public.get_club_attendance_records(uuid, integer) to authenticated;
 revoke all on function public.get_my_club_attendance(integer) from public, anon;
@@ -2327,13 +2353,17 @@ alter table public.club_attendance_sessions add constraint club_attendance_sched
 create index if not exists club_attendance_sessions_schedule_idx
   on public.club_attendance_sessions(starts_at,expires_at) where active;
 
-create or replace function public.check_in_to_club(p_code text)
+create or replace function public.check_in_to_club(p_code text, p_comments text default null)
 returns table (result text, message text, club_slug text, session_label text)
 language plpgsql security definer set search_path=public as $$
 declare target public.club_attendance_sessions%rowtype; target_slug text; scheduled_start timestamptz; scheduled_label text; scheduled_slug text;
 begin
   if auth.uid() is null then
     return query select 'unauthenticated','Sign in before checking in.',null::text,null::text; return;
+  end if;
+
+  if char_length(coalesce(p_comments, '')) > 1000 then
+    return query select 'invalid','Comments must be 1,000 characters or fewer.',null::text,null::text; return;
   end if;
 
   select s.* into target from public.club_attendance_sessions s
@@ -2358,16 +2388,20 @@ begin
     return query select 'not_member','Only active members of this Club can check in.',target_slug,target.label; return;
   end if;
 
-  insert into public.club_attendance_records(session_id,club_id,profile_id)
-  values(target.id,target.club_id,auth.uid()) on conflict(session_id,profile_id) do nothing;
+  insert into public.club_attendance_records(session_id,club_id,profile_id,comments)
+  values(target.id,target.club_id,auth.uid(),nullif(btrim(p_comments),'')) on conflict(session_id,profile_id) do nothing;
   if found then
     return query select 'checked_in','Check-in complete.',target_slug,target.label;
   else
+    if nullif(btrim(p_comments),'') is not null then
+      update public.club_attendance_records set comments=nullif(btrim(p_comments),'')
+      where session_id=target.id and profile_id=auth.uid();
+    end if;
     return query select 'already_checked_in','You are already checked in for this activity.',target_slug,target.label;
   end if;
 end $$;
-revoke all on function public.check_in_to_club(text) from public,anon;
-grant execute on function public.check_in_to_club(text) to authenticated;
+revoke all on function public.check_in_to_club(text,text) from public,anon;
+grant execute on function public.check_in_to_club(text,text) to authenticated;
 
 commit;
 

@@ -208,7 +208,7 @@ export type Database = {
         Returns: undefined;
       };
       check_in_to_club: {
-        Args: { p_code: string };
+        Args: { p_code: string; p_comments?: string | null };
         Returns: ClubCheckInResult[];
       };
       get_club_attendance_records: {
@@ -531,6 +531,7 @@ export type ClubAttendanceRecordRow = {
   club_id: string;
   profile_id: string;
   checked_in_at: string;
+  comments: string | null;
 };
 
 export type ClubShareLinkRow = {
@@ -565,7 +566,9 @@ export type ClubAttendanceRecordDetail = {
   session_label: string;
   profile_id: string;
   member_name: string;
+  osis_number: string | null;
   checked_in_at: string;
+  comments: string | null;
 };
 
 export type MyClubAttendance = { id: string; session_label: string; club_name: string; club_slug: string; checked_in_at: string };
