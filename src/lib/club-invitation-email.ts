@@ -41,20 +41,70 @@ export function buildClubInvitationEmail(input: InvitationEmailInput) {
 
 export type DeliverableClubInvitationEmail = { id: number; to_email: string; subject: string; html_body: string; text_body: string };
 
-export async function deliverClubInvitationEmail(message: DeliverableClubInvitationEmail) {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.EMAIL_FROM;
-  if (!apiKey || !from) return { ok: false as const, retryable: true, error: "Email delivery is not configured" };
+type DeliveryFailure = { ok: false; retryable: boolean; error: string };
+type DeliverySuccess = { ok: true; providerId: string | null };
+
+function sender(value: string) {
+  const match = value.trim().match(/^(.+?)\s*<([^<>]+)>$/);
+  return match ? { name: match[1].trim(), email: match[2].trim() } : { email: value.trim() };
+}
+
+async function sendWithResend(message: DeliverableClubInvitationEmail, apiKey: string, from: string): Promise<DeliverySuccess | DeliveryFailure> {
   try {
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", "Idempotency-Key": `club-invitation/${message.id}` },
       body: JSON.stringify({ from, to: [message.to_email], subject: message.subject, html: message.html_body, text: message.text_body }),
+      signal: AbortSignal.timeout(15_000),
     });
     const body = await response.json().catch(() => ({})) as { id?: string; message?: string };
-    if (!response.ok) return { ok: false as const, retryable: response.status === 429 || response.status >= 500, error: body.message ?? `Email provider returned ${response.status}` };
-    return { ok: true as const, providerId: body.id ?? null };
+    if (!response.ok) return { ok: false, retryable: response.status === 429 || response.status >= 500, error: `Resend: ${body.message ?? `HTTP ${response.status}`}` };
+    return { ok: true, providerId: `resend:${body.id ?? "accepted"}` };
   } catch (error) {
-    return { ok: false as const, retryable: true, error: error instanceof Error ? error.message : "Email request failed" };
+    return { ok: false, retryable: true, error: `Resend: ${error instanceof Error ? error.message : "request failed"}` };
   }
+}
+
+async function sendWithBrevo(message: DeliverableClubInvitationEmail, apiKey: string, from: string): Promise<DeliverySuccess | DeliveryFailure> {
+  try {
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: { "api-key": apiKey, Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sender: sender(from),
+        to: [{ email: message.to_email }],
+        subject: message.subject,
+        htmlContent: message.html_body,
+        textContent: message.text_body,
+        headers: { "Idempotency-Key": `club-invitation/${message.id}` },
+        tags: ["club-invitation"],
+      }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    const body = await response.json().catch(() => ({})) as { messageId?: string; message?: string; code?: string };
+    if (!response.ok) return { ok: false, retryable: response.status === 429 || response.status >= 500, error: `Brevo: ${body.message ?? body.code ?? `HTTP ${response.status}`}` };
+    return { ok: true, providerId: `brevo:${body.messageId ?? "accepted"}` };
+  } catch (error) {
+    return { ok: false, retryable: true, error: `Brevo: ${error instanceof Error ? error.message : "request failed"}` };
+  }
+}
+
+export async function deliverClubInvitationEmail(message: DeliverableClubInvitationEmail): Promise<DeliverySuccess | DeliveryFailure> {
+  const from = process.env.EMAIL_FROM;
+  if (!from) return { ok: false, retryable: true, error: "EMAIL_FROM is not configured" };
+
+  const failures: DeliveryFailure[] = [];
+  if (process.env.RESEND_API_KEY) {
+    const result = await sendWithResend(message, process.env.RESEND_API_KEY, from);
+    if (result.ok) return result;
+    failures.push(result);
+  }
+  if (process.env.BREVO_API_KEY) {
+    const result = await sendWithBrevo(message, process.env.BREVO_API_KEY, process.env.BREVO_EMAIL_FROM || from);
+    if (result.ok) return result;
+    failures.push(result);
+  }
+
+  if (!failures.length) return { ok: false, retryable: true, error: "RESEND_API_KEY and BREVO_API_KEY are not configured" };
+  return { ok: false, retryable: failures.some((failure) => failure.retryable), error: failures.map((failure) => failure.error).join("; ") };
 }

@@ -296,7 +296,7 @@ export async function inviteStudentToClub(formData: FormData) {
   revalidatePath(`/clubs/manage/${clubId}`);
   return delivery.ok
     ? { ok: true, message: profile.data?.role === "student" ? "The student was added and the Club introduction email was sent." : "Invitation sent. The student will join automatically after registering with this email." }
-    : { ok: true, message: "Invitation saved and automatic joining is ready. Email delivery is queued and needs the Resend settings if they are not configured yet." };
+    : { ok: true, message: "Invitation saved and automatic joining is ready. Email delivery remains queued; check the Resend and Brevo settings." };
 }
 
 export async function revokeStudentClubInvitation(formData: FormData) {
