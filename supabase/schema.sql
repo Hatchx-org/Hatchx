@@ -3935,7 +3935,7 @@ language sql stable security definer set search_path=public as $$
  select jsonb_build_object('id',t.id,'name',t.name,'description',t.description,'columns',t.columns,'club_name',c.name)
  from public.club_custom_form_links l join public.club_custom_tables t on t.id=l.table_id join public.clubs c on c.id=t.club_id
  where p_token ~ '^[A-Za-z0-9_-]{32}$'
-   and l.token_hash=encode(extensions.digest(p_token,'sha256'),'hex') and l.active and (l.expires_at is null or l.expires_at>now())
+   and l.token_hash=encode(extensions.digest(p_token::bytea,'sha256'::text),'hex') and l.active and (l.expires_at is null or l.expires_at>now())
  limit 1;
 $$;
 
@@ -3946,7 +3946,7 @@ begin
  if p_token !~ '^[A-Za-z0-9_-]{32}$' then raise exception 'Form link is invalid or expired' using errcode='P0002'; end if;
  select l.table_id,t.columns into target_table,target_columns
  from public.club_custom_form_links l join public.club_custom_tables t on t.id=l.table_id
- where l.token_hash=encode(extensions.digest(p_token,'sha256'),'hex') and l.active and (l.expires_at is null or l.expires_at>now()) for update of l;
+ where l.token_hash=encode(extensions.digest(p_token::bytea,'sha256'::text),'hex') and l.active and (l.expires_at is null or l.expires_at>now()) for update of l;
  if target_table is null then raise exception 'Form link is invalid or expired' using errcode='P0002'; end if;
  if jsonb_typeof(p_data)<>'object' then raise exception 'Invalid response' using errcode='23514'; end if;
  if octet_length(p_data::text)>65536 or (select count(*) from jsonb_object_keys(p_data))>30 then raise exception 'Response is too large' using errcode='23514'; end if;

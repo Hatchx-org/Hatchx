@@ -13,7 +13,7 @@ Complete this checklist for every production environment.
 - Keep Supabase leaked-password protection enabled and configure only the
   required school domains in `ALLOWED_EMAIL_DOMAINS`.
 - Keep Row Level Security enabled on every client-accessible Supabase table.
-- Apply `supabase/security-hardening.sql` to existing databases after deploying
+- Apply `supabase/security-hardening-v2.sql` to existing databases after deploying
   the matching application release.
 - Protect the GitHub `main` branch, require the CI workflow, and restrict who can
   change Actions secrets or production deployments.
