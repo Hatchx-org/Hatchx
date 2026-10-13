@@ -217,7 +217,7 @@ export async function applyClubImport(formData: FormData) {
   let count = 0;
 
   for (const row of rows.data ?? []) {
-    const payload = row.payload as ClubRosterPayload;
+    const payload = row.payload as unknown as ClubRosterPayload;
 
     // Invalid or irregular schedules do NOT block Club creation.
     const meetings = clubRosterMeetings(payload);
