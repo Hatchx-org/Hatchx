@@ -1,5 +1,18 @@
 import type { NextConfig } from "next";
 
+function configuredSupabaseSources() {
+  try {
+    const url = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "");
+    const localDevelopment = process.env.NODE_ENV === "development" && ["localhost", "127.0.0.1", "::1"].includes(url.hostname);
+    if (url.protocol !== "https:" && !(localDevelopment && url.protocol === "http:")) return { http: "", websocket: "" };
+    return { http: url.origin, websocket: `${url.protocol === "https:" ? "wss:" : "ws:"}//${url.host}` };
+  } catch {
+    return { http: "", websocket: "" };
+  }
+}
+
+const supabaseSources = configuredSupabaseSources();
+
 const contentSecurityPolicy = [
   "default-src 'self'",
   "base-uri 'self'",
@@ -9,9 +22,9 @@ const contentSecurityPolicy = [
   `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self' data:",
-  "img-src 'self' data: blob: https://*.supabase.co",
-  "media-src 'self' https://*.supabase.co",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.vercel-insights.com",
+  `img-src 'self' data: blob: https://*.supabase.co${supabaseSources.http ? ` ${supabaseSources.http}` : ""}`,
+  `media-src 'self' https://*.supabase.co${supabaseSources.http ? ` ${supabaseSources.http}` : ""}`,
+  `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.vercel-insights.com${supabaseSources.http ? ` ${supabaseSources.http}` : ""}${supabaseSources.websocket ? ` ${supabaseSources.websocket}` : ""}`,
   "worker-src 'self' blob:",
   "manifest-src 'self'",
   ...(process.env.NODE_ENV === "production" ? ["upgrade-insecure-requests"] : []),
