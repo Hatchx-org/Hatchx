@@ -89,7 +89,12 @@ export const getSiteText = cache(async () => {
     if (Object.hasOwn(result, item.key)) result[item.key as keyof typeof result] = item.body;
   }
   const { data: scheduled, error: scheduledError } = await db.from("site_content_scheduled").select("key,body").lte("publish_at", new Date().toISOString());
-  if (scheduledError) await recordServerError("site-content-scheduled", scheduledError);
+  if (scheduledError) {
+    await recordServerError(
+      "site-content-scheduled",
+      new Error(scheduledError.message)
+    );
+  }
   for (const item of scheduled ?? []) {
     if (Object.hasOwn(result, item.key)) result[item.key as keyof typeof result] = item.body;
   }
