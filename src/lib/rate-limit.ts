@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import type { createServerClient } from "@/lib/supabase/server";
 
-export type RateLimitScope = "search_api" | "analytics_api" | "error_report" | "support_submit" | "announcement_submit" | "event_registration" | "membership_action" | "club_application";
+export type RateLimitScope = "search_api" | "analytics_api" | "error_report" | "support_submit" | "announcement_submit" | "event_registration" | "membership_action" | "club_application" | "public_form_submit";
 type Db = Awaited<ReturnType<typeof createServerClient>>;
 
 function forwardedClient(value: string | null) {

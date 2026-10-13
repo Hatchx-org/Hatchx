@@ -3,7 +3,9 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createServerClient } from "@/lib/supabase/server";
 
 function csvCell(value: string | null | undefined) {
-  return `"${(value ?? "").replaceAll('"', '""')}"`;
+  let text = value ?? "";
+  if (/^[=+\-@]/.test(text)) text = `'${text}`;
+  return `"${text.replaceAll('"', '""')}"`;
 }
 
 function attendanceDate(value: string) {

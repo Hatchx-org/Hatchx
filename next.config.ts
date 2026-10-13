@@ -1,5 +1,22 @@
 import type { NextConfig } from "next";
 
+const contentSecurityPolicy = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+  "form-action 'self'",
+  `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
+  "style-src 'self' 'unsafe-inline'",
+  "font-src 'self' data:",
+  "img-src 'self' data: blob: https://*.supabase.co",
+  "media-src 'self' https://*.supabase.co",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.vercel-insights.com",
+  "worker-src 'self' blob:",
+  "manifest-src 'self'",
+  ...(process.env.NODE_ENV === "production" ? ["upgrade-insecure-requests"] : []),
+].join("; ");
+
 const nextConfig: NextConfig = {
   reactCompiler: true,
   // Accept a 4 MiB photo plus multipart metadata, below Vercel's payload limit.
@@ -32,6 +49,10 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+          { key: "Content-Security-Policy", value: contentSecurityPolicy },
+          { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
+          { key: "X-DNS-Prefetch-Control", value: "off" },
         ],
       },
     ];

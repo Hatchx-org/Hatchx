@@ -2,13 +2,13 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createServerClient } from "@/lib/supabase/server";
+import { isJsonRequest, isSameOriginRequest } from "@/lib/request-security";
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Sign in required" }, { status: 401 });
-  if (!request.headers.get("content-type")?.startsWith("application/json")) return NextResponse.json({ error: "JSON required" }, { status: 415 });
-  const fetchSite = request.headers.get("sec-fetch-site");
-  if (fetchSite && !["same-origin", "same-site"].includes(fetchSite)) return NextResponse.json({ error: "Not allowed" }, { status: 403 });
+  if (!isSameOriginRequest(request)) return NextResponse.json({ error: "Not allowed" }, { status: 403 });
+  if (!isJsonRequest(request)) return NextResponse.json({ error: "JSON required" }, { status: 415 });
   const db = await createServerClient();
   const limit = await checkRateLimit(db, "error_report", request);
   if (!limit.allowed) return NextResponse.json({ error: limit.unavailable ? "Monitoring unavailable" : "Too many reports" }, { status: limit.unavailable ? 503 : 429 });

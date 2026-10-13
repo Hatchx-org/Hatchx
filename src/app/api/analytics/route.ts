@@ -2,9 +2,12 @@ import { NextResponse } from "next/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createServerClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { isJsonRequest, isSameOriginRequest } from "@/lib/request-security";
 
 export async function POST(request: Request) {
   if (!isSupabaseConfigured()) return new Response(null, { status: 204 });
+  if (!isSameOriginRequest(request)) return NextResponse.json({ error: "Not allowed" }, { status: 403 });
+  if (!isJsonRequest(request)) return NextResponse.json({ error: "JSON required" }, { status: 415 });
   let body: Record<string, unknown>;
   try { body = await request.json() as Record<string, unknown>; } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
   const eventName = String(body.eventName ?? "");

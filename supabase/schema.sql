@@ -2910,7 +2910,8 @@ begin
     ('announcement_submit',10,3600),
     ('event_registration',30,60),
     ('membership_action',30,60),
-    ('club_application',5,86400)
+    ('club_application',5,86400),
+    ('public_form_submit',20,3600)
   ) as limits(scope,max_requests,window_seconds)
   where limits.scope=p_scope;
   if max_requests is null then return false; end if;
@@ -3932,18 +3933,27 @@ create or replace function public.get_public_custom_form(p_token text) returns j
 language sql stable security definer set search_path=public as $$
  select jsonb_build_object('id',t.id,'name',t.name,'description',t.description,'columns',t.columns,'club_name',c.name)
  from public.club_custom_form_links l join public.club_custom_tables t on t.id=l.table_id join public.clubs c on c.id=t.club_id
- where l.token_hash=encode(digest(p_token,'sha256'),'hex') and l.active and (l.expires_at is null or l.expires_at>now())
+ where p_token ~ '^[A-Za-z0-9_-]{32}$'
+   and l.token_hash=encode(digest(p_token,'sha256'),'hex') and l.active and (l.expires_at is null or l.expires_at>now())
  limit 1;
 $$;
 
 create or replace function public.submit_public_custom_form(p_token text,p_data jsonb) returns uuid
 language plpgsql security definer set search_path=public as $$
-declare target_table uuid; result_id uuid;
+declare target_table uuid; target_columns jsonb; result_id uuid;
 begin
- select l.table_id into target_table from public.club_custom_form_links l
- where l.token_hash=encode(digest(p_token,'sha256'),'hex') and l.active and (l.expires_at is null or l.expires_at>now()) for update;
+ if p_token !~ '^[A-Za-z0-9_-]{32}$' then raise exception 'Form link is invalid or expired' using errcode='P0002'; end if;
+ select l.table_id,t.columns into target_table,target_columns
+ from public.club_custom_form_links l join public.club_custom_tables t on t.id=l.table_id
+ where l.token_hash=encode(digest(p_token,'sha256'),'hex') and l.active and (l.expires_at is null or l.expires_at>now()) for update of l;
  if target_table is null then raise exception 'Form link is invalid or expired' using errcode='P0002'; end if;
  if jsonb_typeof(p_data)<>'object' then raise exception 'Invalid response' using errcode='23514'; end if;
+ if octet_length(p_data::text)>65536 or (select count(*) from jsonb_object_keys(p_data))>30 then raise exception 'Response is too large' using errcode='23514'; end if;
+ if exists(select 1 from jsonb_each(p_data) item where jsonb_typeof(item.value)='string' and char_length(item.value#>>'{}')>2000) then raise exception 'Response field is too long' using errcode='23514'; end if;
+ if exists(
+   select 1 from jsonb_object_keys(p_data) submitted(key)
+   where not exists(select 1 from jsonb_array_elements(target_columns) column_definition where column_definition->>'key'=submitted.key)
+ ) then raise exception 'Response contains an unknown field' using errcode='23514'; end if;
  insert into public.club_custom_table_rows(table_id,data,created_by) values(target_table,p_data,null) returning id into result_id;
  return result_id;
 end $$;

@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { createServerClient } from "@/lib/supabase/server";
-
-function sameSite(request: Request) {
-  const value = request.headers.get("sec-fetch-site");
-  return !value || value === "same-origin" || value === "same-site";
-}
+import { isJsonRequest, isSameOriginRequest } from "@/lib/request-security";
 
 function validEndpoint(value: string) {
   try {
@@ -31,7 +27,8 @@ function expirationDate(value: unknown) {
 export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Sign in required" }, { status: 401 });
-  if (!sameSite(request)) return NextResponse.json({ error: "Not allowed" }, { status: 403 });
+  if (!isSameOriginRequest(request)) return NextResponse.json({ error: "Not allowed" }, { status: 403 });
+  if (!isJsonRequest(request)) return NextResponse.json({ error: "JSON required" }, { status: 415 });
   let body: { endpoint?: unknown; expirationTime?: unknown; keys?: { p256dh?: unknown; auth?: unknown } };
   try { body = await request.json(); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
   const endpoint = typeof body.endpoint === "string" ? body.endpoint.slice(0, 2000) : "";
@@ -52,7 +49,8 @@ export async function POST(request: Request) {
 export async function DELETE(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Sign in required" }, { status: 401 });
-  if (!sameSite(request)) return NextResponse.json({ error: "Not allowed" }, { status: 403 });
+  if (!isSameOriginRequest(request)) return NextResponse.json({ error: "Not allowed" }, { status: 403 });
+  if (!isJsonRequest(request)) return NextResponse.json({ error: "JSON required" }, { status: 415 });
   let endpoint = "";
   try { endpoint = String((await request.json() as { endpoint?: unknown }).endpoint ?? "").slice(0, 2000); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
   const db = await createServerClient();
