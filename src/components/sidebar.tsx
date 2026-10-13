@@ -88,6 +88,7 @@ export const adminNavItems: NavItem[] = [
       { href: "/admin/support", label: "Support Requests", permission: "support.manage" },
       { href: "/admin/opportunities", label: "Manage Opportunities", permission: "opportunities.manage" },
       { href: "/admin/events", label: "Manage Events", permission: "events.manage" },
+      { href: "/admin/data", label: "Data", roles: ["admin"] },
       { href: "/admin/users", label: "Manage Users", roles: ["admin"] },
       { href: "/admin/audit", label: "Management Audit", roles: ["admin"] },
       { href: "/manage/site", label: "Public Content", permission: "site.manage" },

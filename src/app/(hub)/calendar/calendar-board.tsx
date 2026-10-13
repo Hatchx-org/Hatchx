@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import EventForm from "@/app/(hub)/admin/events/event-form";
 import type { EventItem } from "@/lib/data";
+import type { CalendarSourceRow, EventRow } from "@/lib/supabase/types";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MONTH_NAMES = [
@@ -35,7 +37,7 @@ function eventsOn(events: EventItem[], year: number, month: number, day: number)
   });
 }
 
-export default function CalendarBoard({ events }: { events: EventItem[] }) {
+export default function CalendarBoard({ events, adminEvents, calendars = [], clubs = [] }: { events: EventItem[]; adminEvents?: EventRow[]; calendars?: CalendarSourceRow[]; clubs?: Array<{ id: string; name: string }> }) {
   // Open on the current month; users can navigate back to archived events.
   const defaultMonth = useMemo(() => {
     const now = new Date();
@@ -45,6 +47,8 @@ export default function CalendarBoard({ events }: { events: EventItem[] }) {
   const [cursor, setCursor] = useState(defaultMonth);
   const [layer, setLayer] = useState("all");
   const [view, setView] = useState<"auto" | "month" | "list">("auto");
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [listLimit, setListLimit] = useState(30);
   const customCalendars = useMemo(() => Array.from(new Map(events.filter(event => event.calendarId).map(event => [event.calendarId!, { id: event.calendarId!, name: event.calendarName ?? "Calendar", color: event.calendarColor ?? "#263A99" }])).values()), [events]);
   const visibleEvents = useMemo(
     () => layer === "all" ? events : layer.startsWith("calendar:") ? events.filter(event => event.calendarId === layer.slice(9)) : events.filter((event) => (event.source ?? (event.category === "sports" ? "sports" : "school")) === layer),
@@ -60,6 +64,12 @@ export default function CalendarBoard({ events }: { events: EventItem[] }) {
       .sort((a, b) => `${a.dateISO}${a.time}`.localeCompare(`${b.dateISO}${b.time}`)),
     [visibleEvents, cursor],
   );
+  const adminById = useMemo(() => new Map((adminEvents ?? []).map(event => [String(event.id), event])), [adminEvents]);
+  const selectedDayEvents = useMemo(() => {
+    if (!selectedDay) return [];
+    const [year, month, day] = selectedDay.split("-").map(Number);
+    return eventsOn(visibleEvents, year, month - 1, day).sort((a, b) => a.time.localeCompare(b.time));
+  }, [selectedDay, visibleEvents]);
 
   const cells = useMemo(() => {
     const first = new Date(Date.UTC(cursor.year, cursor.month, 1));
@@ -130,6 +140,7 @@ export default function CalendarBoard({ events }: { events: EventItem[] }) {
           {cells.map((day, i) => {
           const dayEvents = day ? eventsOn(visibleEvents, cursor.year, cursor.month, day) : [];
           const isToday = isThisMonth && day === today.getDate();
+          const dateKey = day ? `${cursor.year}-${String(cursor.month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}` : null;
           return (
             <div
               key={i}
@@ -138,7 +149,7 @@ export default function CalendarBoard({ events }: { events: EventItem[] }) {
               }`}
             >
               {day && (
-                <span
+                <button type="button" onClick={() => setSelectedDay(dateKey)} aria-label={`View all events on ${MONTH_NAMES[cursor.month]} ${day}`}
                   className={`text-xs font-semibold ${
                     isToday
                       ? "flex h-5 w-5 items-center justify-center rounded-full bg-cream text-black"
@@ -146,7 +157,7 @@ export default function CalendarBoard({ events }: { events: EventItem[] }) {
                   }`}
                 >
                   {day}
-                </span>
+                </button>
               )}
               {dayEvents.slice(0, 2).map((e) => (
                 <Link
@@ -159,17 +170,24 @@ export default function CalendarBoard({ events }: { events: EventItem[] }) {
                 </Link>
               ))}
               {dayEvents.length > 2 && (
-                <span className="text-[10px] font-semibold text-powder">
+                <button type="button" onClick={() => setSelectedDay(dateKey)} className="text-left text-[10px] font-semibold text-powder hover:text-cream">
                   +{dayEvents.length - 2} more
-                </span>
+                </button>
               )}
             </div>
           );
           })}
         </div>
       </div>
+      {selectedDay ? <div className="border-t border-line bg-[#0d1018] px-5 py-5 sm:px-6">
+        <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[.16em] text-powder">Daily agenda</p><h3 className="mt-1 text-xl font-bold text-cream">{new Intl.DateTimeFormat("en-US", { dateStyle: "full", timeZone: "UTC" }).format(new Date(`${selectedDay}T00:00:00Z`))}</h3><p className="mt-1 text-xs text-muted">{selectedDayEvents.length} item{selectedDayEvents.length === 1 ? "" : "s"} on the selected calendar layer</p></div><button type="button" onClick={() => setSelectedDay(null)} className="rounded-full border border-line px-3 py-1.5 text-xs font-bold text-cream">Close</button></div>
+        {selectedDayEvents.length ? <div className="mt-4 max-h-[34rem] space-y-2 overflow-y-auto pr-1">{selectedDayEvents.map(event => {
+          const record = adminById.get(String(event.id));
+          return <article key={event.id} className="rounded-control border border-line bg-black/30 p-3"><div className="flex items-start gap-3"><span className="mt-1 size-2 shrink-0 rounded-full bg-powder" style={event.calendarColor ? { backgroundColor: event.calendarColor } : undefined}/><div className="min-w-0 flex-1"><Link href={`/calendar/${event.id}`} className="font-semibold text-cream hover:text-powder">{event.title}</Link><p className="mt-1 text-xs text-muted">{event.time} · {event.location}</p></div>{record ? <span className="rounded-full bg-powder/15 px-2 py-1 text-[10px] font-bold uppercase text-powder">Editable</span> : <span className="rounded-full border border-line px-2 py-1 text-[10px] font-bold uppercase text-muted">Club schedule</span>}</div>{record ? <details className="mt-3 border-t border-line pt-3"><summary className="cursor-pointer text-xs font-bold text-powder">Edit or delete this event</summary><div className="mt-4 rounded-control bg-white p-4"><EventForm event={record} calendars={calendars} clubs={clubs} canManageMeetingEffects canDeleteClubEvent /></div></details> : <p className="mt-2 text-xs text-muted">Edit this recurring meeting from the Club’s content workspace.</p>}</article>;
+        })}</div> : <p className="mt-4 rounded-control border border-dashed border-line p-5 text-center text-sm text-muted">Nothing is scheduled on this date for the selected layer.</p>}
+      </div> : null}
       <div className={`${view === "month" ? "hidden" : view === "auto" ? "block sm:hidden" : "block"} divide-y divide-line`}>
-          {monthEvents.length ? monthEvents.map((event) => (
+          {monthEvents.length ? monthEvents.slice(0, listLimit).map((event) => (
             <Link key={event.id} href={`/calendar/${event.id}`} className={`flex gap-4 px-5 py-4 transition-colors sm:px-6 ${event.meetingEffect ? "bg-red-950/40 hover:bg-red-950/60" : "hover:bg-cream/5"}`}>
               <time className="w-16 shrink-0 text-sm font-bold text-powder">
                 {event.dateISO ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(`${event.dateISO}T00:00:00`)) : "TBA"}
@@ -183,6 +201,7 @@ export default function CalendarBoard({ events }: { events: EventItem[] }) {
           )) : (
             <p className="px-6 py-10 text-center text-sm text-muted">No events in this month for the selected layer.</p>
           )}
+          {monthEvents.length > listLimit ? <div className="p-4 text-center"><button type="button" onClick={() => setListLimit(limit => limit + 30)} className="rounded-full border border-line px-5 py-2 text-sm font-bold text-cream">Show 30 more · {monthEvents.length - listLimit} remaining</button></div> : null}
       </div>
     </section>
   );

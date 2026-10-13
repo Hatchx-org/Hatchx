@@ -100,6 +100,7 @@ export default async function AdminPage() {
                 { label: "Events", href: "/admin/events" },
                 { label: "Public Content & FAQs", href: "/manage/site" },
                 ...(user.role === "admin" ? [
+                  { label: "Data", href: "/admin/data" },
                   { label: "Manage Users", href: "/admin/users" },
                   { label: "Announcement Review", href: "/admin/review" },
                   { label: "Management Audit", href: "/admin/audit" },

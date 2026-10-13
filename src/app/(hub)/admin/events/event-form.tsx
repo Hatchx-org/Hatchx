@@ -13,11 +13,12 @@ function localDateTime(value: string | null) {
   return new Date(date.getTime() - offset).toISOString().slice(0, 16);
 }
 
-export default function EventForm({ event, calendars = [], clubs = [], canManageMeetingEffects = false }: {
+export default function EventForm({ event, calendars = [], clubs = [], canManageMeetingEffects = false, canDeleteClubEvent = false }: {
   event?: EventRow;
   calendars?: CalendarSourceRow[];
   clubs?: Array<{ id: string; name: string }>;
   canManageMeetingEffects?: boolean;
+  canDeleteClubEvent?: boolean;
 }) {
   const [state, action, pending] = useActionState(saveEvent, null);
   const [deleteState, deleteAction, deleting] = useActionState(deleteEvent, null);
@@ -57,6 +58,6 @@ export default function EventForm({ event, calendars = [], clubs = [], canManage
       <button disabled={pending} className="h-11 rounded-full bg-navy px-5 font-bold text-cream disabled:opacity-50">{pending ? "Saving…" : event ? "Save changes" : "Add to Calendar"}</button>
     </form>
 
-    {event && !event.club_id ? <form action={deleteAction} onSubmit={(submitEvent) => { if (!window.confirm(`Permanently delete “${event.title}”?`)) submitEvent.preventDefault(); }} className="mt-4 flex flex-wrap items-center gap-3 border-t border-line pt-4"><input type="hidden" name="id" value={event.id}/><input type="hidden" name="confirm" value="delete"/><p className="min-w-0 flex-1 text-xs text-muted">Deletion is permanent.</p><button disabled={deleting} className="rounded-full border border-orange/40 px-4 py-2 text-xs font-bold text-orange">{deleting ? "Deleting…" : "Delete event"}</button>{deleteState ? <span role={deleteState.ok ? "status" : "alert"} className="basis-full text-xs text-muted">{deleteState.message}</span> : null}</form> : null}
+    {event && (!event.club_id || canDeleteClubEvent) ? <form action={deleteAction} onSubmit={(submitEvent) => { if (!window.confirm(`Permanently delete “${event.title}”?`)) submitEvent.preventDefault(); }} className="mt-4 flex flex-wrap items-center gap-3 border-t border-line pt-4"><input type="hidden" name="id" value={event.id}/><input type="hidden" name="confirm" value="delete"/><p className="min-w-0 flex-1 text-xs text-muted">Deletion is permanent{event.club_id ? " and removes this Club-owned event" : ""}.</p><button disabled={deleting} className="rounded-full border border-orange/40 px-4 py-2 text-xs font-bold text-orange">{deleting ? "Deleting…" : "Delete event"}</button>{deleteState ? <span role={deleteState.ok ? "status" : "alert"} className="basis-full text-xs text-muted">{deleteState.message}</span> : null}</form> : null}
   </div>;
 }

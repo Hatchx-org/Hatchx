@@ -520,8 +520,10 @@ export async function deleteEvent(_prev: ActionState, formData: FormData): Promi
   if (!user || !(await hasPermission("events.manage"))) return { ok: false, message: "Events permission required." };
   if (!id || formData.get("confirm") !== "delete" || !isSupabaseConfigured()) return { ok: false, message: "Confirm deletion first." };
   const db = await createServerClient();
-  const { data, error } = await db.from("events").delete().eq("id", id).is("club_id", null).select("id").maybeSingle();
-  if (error || !data) return { ok: false, message: "Only standalone school events can be deleted here." };
+  let query = db.from("events").delete().eq("id", id);
+  if (user.role !== "admin") query = query.is("club_id", null);
+  const { data, error } = await query.select("id").maybeSingle();
+  if (error || !data) return { ok: false, message: user.role === "admin" ? "Event could not be deleted." : "Only administrators can delete Club-owned events." };
   revalidatePath("/admin/events"); revalidatePath("/calendar", "layout"); revalidatePath("/");
   return { ok: true, message: "Event deleted." };
 }
