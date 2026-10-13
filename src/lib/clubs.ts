@@ -133,6 +133,14 @@ export const getAllClubs = cache(async (limit?: number): Promise<Club[]> => {
   if (limit !== undefined) canonicalQuery = canonicalQuery.limit(limit);
   const { data: canonicalRows, error: canonicalError } = await canonicalQuery;
 
+  if (canonicalError) {
+  throw new Error(`Unable to load clubs: ${canonicalError.message}`);
+  }
+  
+  if (!canonicalRows?.length) {
+    return [];
+  }
+
   if (!canonicalError && canonicalRows?.length) {
     // Fetch relations in parallel to avoid one database round trip per club.
     const ids = canonicalRows.map((row) => row.id);
