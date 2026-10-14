@@ -219,6 +219,9 @@ export type EventItem = {
   calendarColor?: string;
   meetingEffect?: "all" | "club";
   affectedClubName?: string;
+  /** Present only for a generated occurrence of a recurring Club meeting. */
+  recurringClubId?: string;
+  recurringMeetingId?: string;
 };
 
 export const events: EventItem[] = [

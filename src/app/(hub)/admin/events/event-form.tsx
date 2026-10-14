@@ -2,28 +2,23 @@
 
 import { useActionState, useState } from "react";
 import type { CalendarSourceRow, EventRow } from "@/lib/supabase/types";
+import { newYorkDateTimeInput } from "@/lib/calendar-date";
 import { deleteEvent, saveEvent } from "../actions";
 
 const field = "h-11 w-full rounded-control border border-black/10 bg-content-bg px-3 text-sm text-ink outline-none focus:border-navy focus:ring-2 focus:ring-navy/10";
 
-function localDateTime(value: string | null) {
-  if (!value) return "";
-  const date = new Date(value);
-  const offset = date.getTimezoneOffset() * 60_000;
-  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
-}
-
-export default function EventForm({ event, calendars = [], clubs = [], canManageMeetingEffects = false, canDeleteClubEvent = false }: {
+export default function EventForm({ event, calendars = [], clubs = [], canManageMeetingEffects = false, canDeleteClubEvent = false, initialDate }: {
   event?: EventRow;
   calendars?: CalendarSourceRow[];
   clubs?: Array<{ id: string; name: string }>;
   canManageMeetingEffects?: boolean;
   canDeleteClubEvent?: boolean;
+  initialDate?: string;
 }) {
   const [state, action, pending] = useActionState(saveEvent, null);
   const [deleteState, deleteAction, deleting] = useActionState(deleteEvent, null);
-  const [startAt, setStartAt] = useState(localDateTime(event?.start_at ?? null));
-  const [endAt, setEndAt] = useState(localDateTime(event?.end_at ?? null));
+  const [startAt, setStartAt] = useState(newYorkDateTimeInput(event?.start_at ?? null) || (initialDate ? `${initialDate}T08:00` : ""));
+  const [endAt, setEndAt] = useState(newYorkDateTimeInput(event?.end_at ?? null));
   const [meetingEffect, setMeetingEffect] = useState(event?.meeting_effect ?? "none");
 
   return <div>
@@ -34,8 +29,9 @@ export default function EventForm({ event, calendars = [], clubs = [], canManage
         <label className="grid gap-1.5 text-sm font-semibold text-ink">Starts<input type="datetime-local" required value={startAt} onChange={e=>setStartAt(e.target.value)} className={field}/></label>
         <label className="grid gap-1.5 text-sm font-semibold text-ink">Ends <span className="font-normal text-muted">(optional)</span><input type="datetime-local" value={endAt} onChange={e=>setEndAt(e.target.value)} className={field}/></label>
       </div>
-      <input type="hidden" name="start_at" value={startAt ? new Date(startAt).toISOString() : ""}/>
-      <input type="hidden" name="end_at" value={endAt ? new Date(endAt).toISOString() : ""}/>
+      <input type="hidden" name="start_at" value={startAt}/>
+      <input type="hidden" name="end_at" value={endAt}/>
+      <p className="-mt-2 text-xs text-muted">Times use New York time.</p>
       <label className="flex items-center gap-2 rounded-control bg-content-bg p-3 text-sm font-semibold text-ink"><input type="checkbox" name="published" defaultChecked={event ? event.published : true}/> Show immediately on the public Calendar</label>
 
       <details className="rounded-control border border-line p-4" open={Boolean(event)}>

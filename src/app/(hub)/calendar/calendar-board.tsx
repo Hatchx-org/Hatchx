@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import EventForm from "@/app/(hub)/admin/events/event-form";
+import { newYorkDateKey } from "@/lib/calendar-date";
 import type { EventItem } from "@/lib/data";
 import type { CalendarSourceRow, EventRow } from "@/lib/supabase/types";
+import { cancelMeetingOccurrence, deleteEventsOnDate } from "./actions";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MONTH_NAMES = [
@@ -37,11 +39,40 @@ function eventsOn(events: EventItem[], year: number, month: number, day: number)
   });
 }
 
+function DayAdminTools({ date, records, calendars, clubs }: { date: string; records: EventRow[]; calendars: CalendarSourceRow[]; clubs: Array<{ id: string; name: string }> }) {
+  const [state, action, pending] = useActionState(deleteEventsOnDate, null);
+  const names = records.map(record => record.title);
+  return <div className="mt-4 grid gap-3 rounded-control border border-powder/30 bg-black/30 p-4 lg:grid-cols-2">
+    <details>
+      <summary className="cursor-pointer text-sm font-bold text-powder">+ Add an event on this date</summary>
+      <div className="mt-4 rounded-control bg-white p-4"><EventForm key={date} initialDate={date} calendars={calendars} clubs={clubs} canManageMeetingEffects /></div>
+    </details>
+    <div className="lg:border-l lg:border-line lg:pl-4">
+      <p className="text-sm font-bold text-cream">Delete saved events starting this day</p>
+      <p className="mt-1 text-xs leading-5 text-muted">{records.length ? `${records.length} saved event${records.length === 1 ? "" : "s"}: ${names.slice(0, 3).join(", ")}${names.length > 3 ? `, and ${names.length - 3} more` : ""}.` : "There are no saved events starting on this date."} Recurring Club meetings are not deleted.</p>
+      <form action={action} onSubmit={event => { if (!window.confirm(`Permanently delete ${records.length} saved event${records.length === 1 ? "" : "s"} starting on ${date}?\n\n${names.join("\n")}`)) event.preventDefault(); }} className="mt-3">
+        <input type="hidden" name="date" value={date}/><input type="hidden" name="confirm" value="delete-day"/>
+        <button disabled={pending || records.length === 0} className="rounded-full border border-orange/60 px-4 py-2 text-xs font-bold text-orange disabled:cursor-not-allowed disabled:opacity-40">{pending ? "Deleting…" : `Delete all ${records.length || ""} saved event${records.length === 1 ? "" : "s"}`}</button>
+      </form>
+      {state ? <p role={state.ok ? "status" : "alert"} className={`mt-2 text-xs ${state.ok ? "text-[#8ee3ad]" : "text-orange"}`}>{state.message}</p> : null}
+    </div>
+  </div>;
+}
+
+function MeetingOccurrenceAction({ event, date }: { event: EventItem; date: string }) {
+  const [state, action, pending] = useActionState(cancelMeetingOccurrence, null);
+  return <form action={action} onSubmit={submit => { if (!window.confirm(`Cancel only “${event.title}” on ${date}? The weekly schedule will stay unchanged.`)) submit.preventDefault(); }} className="mt-3 border-t border-line pt-3">
+    <input type="hidden" name="date" value={date}/><input type="hidden" name="club_id" value={event.recurringClubId}/><input type="hidden" name="meeting_id" value={event.recurringMeetingId}/><input type="hidden" name="confirm" value="cancel-occurrence"/>
+    <button disabled={pending} className="rounded-full border border-orange/60 px-3 py-1.5 text-xs font-bold text-orange disabled:opacity-50">{pending ? "Cancelling…" : "Cancel this date only"}</button>
+    {state ? <p role={state.ok ? "status" : "alert"} className="mt-2 text-xs text-muted">{state.message}</p> : null}
+  </form>;
+}
+
 export default function CalendarBoard({ events, adminEvents, calendars = [], clubs = [] }: { events: EventItem[]; adminEvents?: EventRow[]; calendars?: CalendarSourceRow[]; clubs?: Array<{ id: string; name: string }> }) {
   // Open on the current month; users can navigate back to archived events.
   const defaultMonth = useMemo(() => {
-    const now = new Date();
-    return { year: now.getFullYear(), month: now.getMonth() };
+    const [year, month] = (newYorkDateKey(new Date()) ?? "1970-01-01").split("-").map(Number);
+    return { year, month: month - 1 };
   }, []);
 
   const [cursor, setCursor] = useState(defaultMonth);
@@ -58,8 +89,8 @@ export default function CalendarBoard({ events, adminEvents, calendars = [], clu
     () => visibleEvents
       .filter((event) => {
         if (!event.dateISO) return false;
-        const date = new Date(`${event.dateISO}T00:00:00`);
-        return date.getFullYear() === cursor.year && date.getMonth() === cursor.month;
+        const [year, month] = event.dateISO.split("-").map(Number);
+        return year === cursor.year && month - 1 === cursor.month;
       })
       .sort((a, b) => `${a.dateISO}${a.time}`.localeCompare(`${b.dateISO}${b.time}`)),
     [visibleEvents, cursor],
@@ -70,6 +101,7 @@ export default function CalendarBoard({ events, adminEvents, calendars = [], clu
     const [year, month, day] = selectedDay.split("-").map(Number);
     return eventsOn(visibleEvents, year, month - 1, day).sort((a, b) => a.time.localeCompare(b.time));
   }, [selectedDay, visibleEvents]);
+  const selectedDayRecords = useMemo(() => selectedDay ? (adminEvents ?? []).filter(event => newYorkDateKey(event.start_at) === selectedDay) : [], [adminEvents, selectedDay]);
 
   const cells = useMemo(() => {
     const first = new Date(Date.UTC(cursor.year, cursor.month, 1));
@@ -88,9 +120,9 @@ export default function CalendarBoard({ events, adminEvents, calendars = [], clu
     });
   };
 
-  const today = new Date();
+  const [todayYear, todayMonth, todayDay] = (newYorkDateKey(new Date()) ?? "1970-01-01").split("-").map(Number);
   const isThisMonth =
-    today.getFullYear() === cursor.year && today.getMonth() === cursor.month;
+    todayYear === cursor.year && todayMonth - 1 === cursor.month;
 
   return (
     <section className="theme-fixed-dark overflow-hidden rounded-[18px] bg-black">
@@ -139,7 +171,7 @@ export default function CalendarBoard({ events, adminEvents, calendars = [], clu
         <div className="grid grid-cols-7">
           {cells.map((day, i) => {
           const dayEvents = day ? eventsOn(visibleEvents, cursor.year, cursor.month, day) : [];
-          const isToday = isThisMonth && day === today.getDate();
+          const isToday = isThisMonth && day === todayDay;
           const dateKey = day ? `${cursor.year}-${String(cursor.month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}` : null;
           return (
             <div
@@ -183,8 +215,9 @@ export default function CalendarBoard({ events, adminEvents, calendars = [], clu
         <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[.16em] text-powder">Daily agenda</p><h3 className="mt-1 text-xl font-bold text-cream">{new Intl.DateTimeFormat("en-US", { dateStyle: "full", timeZone: "UTC" }).format(new Date(`${selectedDay}T00:00:00Z`))}</h3><p className="mt-1 text-xs text-muted">{selectedDayEvents.length} item{selectedDayEvents.length === 1 ? "" : "s"} on the selected calendar layer</p></div><button type="button" onClick={() => setSelectedDay(null)} className="rounded-full border border-line px-3 py-1.5 text-xs font-bold text-cream">Close</button></div>
         {selectedDayEvents.length ? <div className="mt-4 max-h-[34rem] space-y-2 overflow-y-auto pr-1">{selectedDayEvents.map(event => {
           const record = adminById.get(String(event.id));
-          return <article key={event.id} className="rounded-control border border-line bg-black/30 p-3"><div className="flex items-start gap-3"><span className="mt-1 size-2 shrink-0 rounded-full bg-powder" style={event.calendarColor ? { backgroundColor: event.calendarColor } : undefined}/><div className="min-w-0 flex-1"><Link href={`/calendar/${event.id}`} className="font-semibold text-cream hover:text-powder">{event.title}</Link><p className="mt-1 text-xs text-muted">{event.time} · {event.location}</p></div>{record ? <span className="rounded-full bg-powder/15 px-2 py-1 text-[10px] font-bold uppercase text-powder">Editable</span> : <span className="rounded-full border border-line px-2 py-1 text-[10px] font-bold uppercase text-muted">Club schedule</span>}</div>{record ? <details className="mt-3 border-t border-line pt-3"><summary className="cursor-pointer text-xs font-bold text-powder">Edit or delete this event</summary><div className="mt-4 rounded-control bg-white p-4"><EventForm event={record} calendars={calendars} clubs={clubs} canManageMeetingEffects canDeleteClubEvent /></div></details> : <p className="mt-2 text-xs text-muted">Edit this recurring meeting from the Club’s content workspace.</p>}</article>;
+          return <article key={event.id} className="rounded-control border border-line bg-black/30 p-3"><div className="flex items-start gap-3"><span className="mt-1 size-2 shrink-0 rounded-full bg-powder" style={event.calendarColor ? { backgroundColor: event.calendarColor } : undefined}/><div className="min-w-0 flex-1"><Link href={`/calendar/${event.id}`} className="font-semibold text-cream hover:text-powder">{event.title}</Link><p className="mt-1 text-xs text-muted">{event.time} · {event.location}</p></div>{record ? <span className="rounded-full bg-powder/15 px-2 py-1 text-[10px] font-bold uppercase text-powder">Editable</span> : <span className="rounded-full border border-line px-2 py-1 text-[10px] font-bold uppercase text-muted">Club schedule</span>}</div>{record ? <details className="mt-3 border-t border-line pt-3"><summary className="cursor-pointer text-xs font-bold text-powder">Edit or delete this event</summary><div className="mt-4 rounded-control bg-white p-4"><EventForm event={record} calendars={calendars} clubs={clubs} canManageMeetingEffects canDeleteClubEvent /></div></details> : event.recurringClubId && event.recurringMeetingId ? <MeetingOccurrenceAction event={event} date={selectedDay}/> : <p className="mt-2 text-xs text-muted">Edit this recurring meeting from the Club’s content workspace.</p>}</article>;
         })}</div> : <p className="mt-4 rounded-control border border-dashed border-line p-5 text-center text-sm text-muted">Nothing is scheduled on this date for the selected layer.</p>}
+        {adminEvents ? <DayAdminTools date={selectedDay} records={selectedDayRecords} calendars={calendars} clubs={clubs}/> : null}
       </div> : null}
       <div className={`${view === "month" ? "hidden" : view === "auto" ? "block sm:hidden" : "block"} divide-y divide-line`}>
           {monthEvents.length ? monthEvents.slice(0, listLimit).map((event) => (

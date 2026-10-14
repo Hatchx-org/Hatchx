@@ -14,6 +14,12 @@ test("Club cancellation only suppresses the selected Club", () => {
   assert.equal(isMeetingSuppressed("2026-10-09", "club-b", exceptions), false);
 });
 
+test("late New York cancellations do not shift to the next UTC date", () => {
+  const exceptions = [{ start_at: "2026-10-15T01:30:00.000Z", end_at: null, meeting_effect: "club" as const, affected_club_id: "club-a" }];
+  assert.equal(isMeetingSuppressed("2026-10-14", "club-a", exceptions), true);
+  assert.equal(isMeetingSuppressed("2026-10-15", "club-a", exceptions), false);
+});
+
 test("ordinary calendar events never suppress meetings", () => {
   const exceptions = [{ start_at: "2026-10-09T13:00:00.000Z", end_at: null, meeting_effect: "none" as const, affected_club_id: null }];
   assert.equal(isMeetingSuppressed("2026-10-09", "club-a", exceptions), false);

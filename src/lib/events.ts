@@ -5,12 +5,13 @@ import { createServerClient } from "./supabase/server";
 import type { CalendarSourceRow, EventRow } from "./supabase/types";
 import { developmentFallback, normalizeRecordId } from "./live-data";
 import { isMeetingSuppressed } from "./meeting-exceptions";
+import { newYorkDateKey, SCHOOL_TIME_ZONE } from "./calendar-date";
 
 function formatDate(startAt: string, endAt: string | null) {
   const start = new Date(startAt);
   const end = endAt ? new Date(endAt) : null;
-  const formatter = new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" });
-  return end && start.toDateString() !== end.toDateString()
+  const formatter = new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: SCHOOL_TIME_ZONE });
+  return end && newYorkDateKey(start) !== newYorkDateKey(end)
     ? `${formatter.format(start)} – ${formatter.format(end)}`
     : formatter.format(start);
 }
@@ -24,10 +25,10 @@ function mapEvent(row: EventRow, calendars = new Map<string, CalendarSourceRow>(
     title: row.title,
     category: row.event_type === "sports" ? "sports" : "events",
     date: formatDate(row.start_at, row.end_at),
-    dateISO: row.start_at.slice(0, 10),
-    dateEndISO: row.end_at?.slice(0, 10),
-    time: new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(start)
-      + (end ? ` – ${new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(end)}` : ""),
+    dateISO: newYorkDateKey(start),
+    dateEndISO: end ? newYorkDateKey(end) : undefined,
+    time: new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", timeZone: SCHOOL_TIME_ZONE }).format(start)
+      + (end ? ` – ${new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", timeZone: SCHOOL_TIME_ZONE }).format(end)}` : ""),
     location: row.location ?? "Location TBA",
     price: row.price_label,
     description: row.description,
@@ -75,6 +76,8 @@ function meetingEvents(
           price: "Free",
           description: meeting.recurrence_note ?? `Regular meeting for ${club.name}.`,
           source: "club",
+          recurringClubId: club.id,
+          recurringMeetingId: meeting.id,
         });
       }
       cursor.setDate(cursor.getDate() + 1);

@@ -1,3 +1,5 @@
+import { newYorkDateKey } from "./calendar-date.ts";
+
 export type MeetingException = {
   start_at: string;
   end_at: string | null;
@@ -10,8 +12,8 @@ export function isMeetingSuppressed(dateISO: string, clubId: string, exceptions:
   return exceptions.some((event) => {
     const effect = event.meeting_effect ?? "none";
     if (effect === "none" || (effect === "club" && event.affected_club_id !== clubId)) return false;
-    const start = event.start_at.slice(0, 10);
-    const end = (event.end_at ?? event.start_at).slice(0, 10);
-    return dateISO >= start && dateISO <= end;
+    const start = newYorkDateKey(event.start_at);
+    const end = newYorkDateKey(event.end_at ?? event.start_at);
+    return Boolean(start && end && dateISO >= start && dateISO <= end);
   });
 }
