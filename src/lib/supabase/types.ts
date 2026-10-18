@@ -124,6 +124,7 @@ export type Database = {
       club_import_batches: TableDefinition<ClubImportBatchRow>;
       club_import_rows: TableDefinition<ClubImportRow>;
       pending_club_advisors: TableDefinition<PendingClubAdvisorRow>;
+      pending_club_officers: TableDefinition<PendingClubOfficerRow>;
       club_import_related_records: TableDefinition<ClubImportRelatedRecordRow>;
     };
     Views: {
@@ -165,6 +166,7 @@ export type Database = {
       get_public_custom_form: { Args: { p_token: string }; Returns: unknown };
       submit_public_custom_form: { Args: { p_token: string; p_data: Record<string, string | number | boolean> }; Returns: string };
       can_govern_club: { Args: { p_club_id: string }; Returns: boolean };
+      preassign_club_officer: { Args: { p_club_id: string; p_email: string; p_display_name: string; p_title: string; p_term_start: string | null; p_term_end: string | null }; Returns: string | null };
       resolve_club_share_link: { Args: { p_id: string }; Returns: { club_id: string }[] };
       assign_account_role: { Args: { p_user_id: string; p_role: string; p_club_id?: string | null }; Returns: undefined };
       review_school_announcement: { Args: { p_id: string; p_approve: boolean; p_note: string }; Returns: undefined };
@@ -753,4 +755,5 @@ export type PushDeliveryClaim = { delivery_id: number; notification_id: string; 
 export type ClubImportBatchRow = { id: string; created_by: string; file_name: string; status: "preview" | "applied" | "rolled_back" | "failed"; total_rows: number; valid_rows: number; error_rows: number; created_at: string; applied_at: string | null; rolled_back_at: string | null };
 export type ClubImportRow = { id: number; batch_id: string; row_number: number; payload: Record<string,string>; errors: string[]; before_state: Record<string,unknown> | null; club_id: string | null; action: "insert" | "update" | null };
 export type PendingClubAdvisorRow = { id: string; club_id: string; email: string; display_name: string; created_by: string; claimed_profile_id: string | null; claimed_at: string | null; created_at: string };
+export type PendingClubOfficerRow = { id: string; officer_id: string; club_id: string; email: string; created_by: string; claimed_profile_id: string | null; claimed_at: string | null; created_at: string };
 export type ClubImportRelatedRecordRow = { id: number; batch_id: string; import_row_id: number; entity_type: "meeting" | "advisor" | "pending_advisor"; entity_id: string; created_at: string };

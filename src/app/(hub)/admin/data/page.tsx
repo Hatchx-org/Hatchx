@@ -153,9 +153,9 @@ export default async function AdminDataPage() {
 
             <li>
               Blank or invalid Advisor emails do not
-              block a Club. Automatic Advisor assignment
-              requires a valid address and a teacher
-              account approved by an administrator.
+              block a Club. A valid Advisor email is saved
+              even before registration and is automatically
+              assigned when that teacher creates an account.
             </li>
 
             <li>

@@ -15,6 +15,7 @@ import { generateClubInviteCode } from "@/lib/club-invite-code";
 import { isStudentEmail } from "@/lib/student-registration";
 import { buildClubInvitationEmail, deliverClubInvitationEmail } from "@/lib/club-invitation-email";
 import { isHexColor } from "@/lib/club-appearance";
+import { isAllowedEmail } from "@/lib/email-access";
 
 const denied = { ok: false, message: "You no longer have permission for this club. Refresh or contact your advisor." };
 const invalid = { ok: false, message: "Check the required fields, lengths and dates, then try again." };
@@ -409,42 +410,28 @@ export async function addClubOfficer(formData: FormData) {
   const context = await managerContext(clubId);
   if (!context?.canGovern) return denied;
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const requestedName = String(formData.get("display_name") ?? "").trim();
   const title = String(formData.get("title") ?? "").trim();
   const termStart = parseOptionalDateOnly(String(formData.get("term_start") ?? ""));
   const termEnd = parseOptionalDateOnly(String(formData.get("term_end") ?? ""));
-  if (!email || title.length < 2 || title.length > 80 || termStart === undefined || termEnd === undefined) return invalid;
+  if (!isAllowedEmail(email) || requestedName.length > 120 || title.length < 2 || title.length > 80 || termStart === undefined || termEnd === undefined) return invalid;
   if (termStart && termEnd && termEnd < termStart) return invalid;
 
-  const { data: profile } = await context.supabase
-    .from("profiles")
-    .select("id, full_name, email")
-    .eq("email", email)
-    .maybeSingle();
-  if (!profile) return { ok: false, message: "No accessible member with that email. Approve their club membership first." };
-  // An officer must already be an active member. Appointment never bypasses
-  // the normal membership review workflow or creates membership implicitly.
-  const { data: membership } = await context.supabase
-    .from("club_memberships")
-    .select("id")
-    .eq("club_id", clubId)
-    .eq("profile_id", profile.id)
-    .eq("status", "active")
-    .maybeSingle();
-  if (!membership) return { ok: false, message: "Board members must first have active membership in this club." };
-
-  const { error } = await context.supabase.from("club_officers").insert({
-    club_id: clubId,
-    profile_id: profile.id,
-    display_name: profile.full_name ?? profile.email,
-    title,
-    term_start: termStart,
-    term_end: termEnd,
+  const { data, error } = await context.supabase.rpc("preassign_club_officer", {
+    p_club_id: clubId,
+    p_email: email,
+    p_display_name: requestedName || email.split("@")[0],
+    p_title: title,
+    p_term_start: termStart,
+    p_term_end: termEnd,
   });
-  if (error) return failed;
+  if (error) return ["42703", "PGRST202", "PGRST204"].includes(error.code ?? "")
+    ? { ok: false, message: "Apply supabase/board-and-advisor-preauthorization.sql, then try again." }
+    : { ok: false, message: /already assigned/i.test(error.message) ? "That email is already assigned to this Club board." : failed.message };
   revalidatePath(`/clubs/manage/${clubId}`);
   revalidatePath("/clubs/manage");
   revalidatePath("/clubs");
-  return saved;
+  return { ok: true, message: data ? "Board member saved. Access is active; Club membership is not required." : "Board member saved. Access will activate automatically when this email creates an account." };
 }
 
 export async function removeClubOfficer(formData: FormData) {
