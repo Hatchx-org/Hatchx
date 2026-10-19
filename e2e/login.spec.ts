@@ -29,21 +29,6 @@ test.describe("login and registration", () => {
     expect(overflow).toBeLessThanOrEqual(1);
   });
 
-  test("starts Google OAuth with a safe callback and account chooser", async ({ page }) => {
-    let oauthUrl = "";
-    await page.route("**/auth/v1/authorize**", async (route) => {
-      oauthUrl = route.request().url();
-      await route.abort();
-    });
-    await page.goto("/login?next=/calendar");
-    await page.getByRole("button", { name: "Sign in with Google" }).click();
-    await expect.poll(() => oauthUrl).toContain("provider=google");
-    const callback = new URL(new URL(oauthUrl).searchParams.get("redirect_to")!);
-    expect(callback.pathname).toBe("/auth/callback");
-    expect(callback.searchParams.get("next")).toBe("/calendar");
-    expect(oauthUrl).toContain("prompt=select_account");
-  });
-
   test("shows student-only fields and manages multiple invitation codes", async ({ page }) => {
     await openStudentRegistration(page);
 

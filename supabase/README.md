@@ -15,11 +15,11 @@ The database setup is intentionally kept to three SQL files.
 ## Google sign-in
 
 1. In Google Cloud Console, create an OAuth 2.0 Web application.
-2. Add `https://PROJECT-REF.supabase.co/auth/v1/callback` as an authorized redirect URI.
-3. In **Supabase → Authentication → Providers → Google**, enable Google and paste the Google client ID and client secret.
-4. Keep `https://YOUR-DOMAIN/auth/callback` in **Supabase → Authentication → URL Configuration → Redirect URLs**.
+2. Add `https://YOUR-DOMAIN` under **Authorized JavaScript origins**. DOE deployments can therefore authorize only `https://hatchx.org`; no `supabase.co` Google redirect URI is used.
+3. Set `NEXT_PUBLIC_GOOGLE_CLIENT_ID` to that Web client ID in Vercel and redeploy.
+4. In **Supabase → Authentication → Providers → Google**, enable Google and paste the same Google client ID and its client secret. Supabase uses these values to verify the Google ID token.
 
-Hatchx validates the returned email after OAuth and signs out accounts outside the configured NYC Public Schools domains. The Google client secret belongs only in Supabase—not in Vercel or this repository.
+Hatchx uses the Google Identity Services popup and then validates the returned email before completing login. Accounts outside the configured NYC Public Schools domains are signed out. The Google client ID is public by design; the Google client secret belongs only in Supabase—not in Vercel or this repository.
 
 The SQL is domain-neutral; changing domains never requires editing the schema.
 

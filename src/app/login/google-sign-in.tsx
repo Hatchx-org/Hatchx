@@ -1,54 +1,69 @@
 "use client";
 
-import Image from "next/image";
-import { useState } from "react";
+import Script from "next/script";
+import { useCallback, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase/client";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { rememberDeviceCookie } from "@/lib/supabase/auth-session";
+
+type GoogleCredentialResponse = { credential?: string };
+type GoogleIdentity = {
+  accounts: { id: {
+    initialize: (options: Record<string, unknown>) => void;
+    renderButton: (element: HTMLElement, options: Record<string, unknown>) => void;
+  } };
+};
+
+declare global { interface Window { google?: GoogleIdentity } }
+
+async function createNonce() {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  const nonce = btoa(String.fromCharCode(...bytes));
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(nonce));
+  const hashed = [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, "0")).join("");
+  return { nonce, hashed };
+}
 
 export default function GoogleSignIn({ next }: { next: string }) {
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
+  const host = useRef<HTMLDivElement>(null);
+  const initialized = useRef(false);
+  const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  const router = useRouter();
 
-  async function signIn() {
-    if (pending || !isSupabaseConfigured()) return;
-    setPending(true);
-    setMessage("");
-    // Google sign-in defaults to a browser-only session, which is safer on
-    // shared school computers. Users can still choose a remembered email login.
-    rememberDeviceCookie(false);
-    try {
-      const supabase = createBrowserClient();
-      const redirectTo = new URL("/auth/callback", window.location.origin);
-      redirectTo.searchParams.set("next", next);
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: redirectTo.toString(),
-          scopes: "openid email profile",
-          queryParams: { prompt: "select_account" },
-        },
-      });
-      if (error) {
-        setMessage("Google sign-in is unavailable. Try email sign-in or contact Support.");
-        setPending(false);
-      }
-    } catch {
-      setMessage("Unable to connect to Google. Please try again.");
-      setPending(false);
-    }
-  }
+  const initialize = useCallback(async () => {
+    if (!clientId || !host.current || !window.google || initialized.current) return;
+    initialized.current = true;
+    const { nonce, hashed } = await createNonce();
+    window.google.accounts.id.initialize({
+      client_id: clientId,
+      nonce: hashed,
+      use_fedcm_for_button: true,
+      callback: async ({ credential }: GoogleCredentialResponse) => {
+        if (!credential) return setMessage("Google did not return a valid account. Please try again.");
+        setPending(true);
+        setMessage("");
+        rememberDeviceCookie(false);
+        try {
+          const { error } = await createBrowserClient().auth.signInWithIdToken({ provider: "google", token: credential, nonce });
+          if (error) throw error;
+          router.push(`/auth/google/complete?next=${encodeURIComponent(next)}`);
+        } catch {
+          setMessage("Google sign-in could not complete. Try email sign-in or contact Support.");
+          setPending(false);
+        }
+      },
+    });
+    window.google.accounts.id.renderButton(host.current, {
+      type: "standard", shape: "pill", theme: "outline", text: "signin_with",
+      size: "large", logo_alignment: "left", width: Math.min(400, host.current.clientWidth),
+    });
+  }, [clientId, next, router]);
 
   return <section className="mt-6" aria-label="Google sign in">
-    <button
-      type="button"
-      onClick={signIn}
-      disabled={pending || !isSupabaseConfigured()}
-      className="relative mx-auto flex h-10 w-full max-w-[400px] items-center justify-center overflow-hidden rounded-[20px] border border-[#dadce0] bg-white px-10 font-['Roboto',Arial,sans-serif] text-[14px] font-medium leading-[17px] tracking-[0.25px] text-[#3c4043] transition hover:bg-[#f8faff] hover:shadow-sm focus-visible:border-[#6096b4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6096b4] disabled:cursor-wait disabled:opacity-60"
-    >
-      <Image src="/login/google-g.svg" alt="" width={20} height={20} className="absolute left-[13px] top-[10px]" />
-      <span>{pending ? "Opening Google…" : "Sign in with Google"}</span>
-    </button>
+    {clientId ? <><Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" onReady={() => { void initialize(); }} /><div ref={host} className={`mx-auto h-10 w-full max-w-[400px] overflow-hidden rounded-[20px] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#6096b4] ${pending ? "pointer-events-none opacity-60" : ""}`} /></> : <button disabled className="mx-auto flex h-10 w-full max-w-[400px] items-center justify-center rounded-[20px] border border-[#dadce0] bg-white text-sm font-medium text-[#3c4043] opacity-60">Sign in with Google</button>}
+    {pending ? <p role="status" className="mt-2 text-center text-xs text-[#5f6368]">Signing in securely…</p> : null}
     {message ? <p role="alert" className="mx-auto mt-3 max-w-[400px] rounded-lg bg-orange/10 p-3 text-sm leading-5 text-orange">{message}</p> : null}
     <div className="my-5 flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.14em] text-[#697386]" aria-hidden><span className="h-px flex-1 bg-black/10" /><span>or use email</span><span className="h-px flex-1 bg-black/10" /></div>
   </section>;
