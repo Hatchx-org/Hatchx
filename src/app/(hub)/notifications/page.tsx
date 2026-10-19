@@ -8,7 +8,7 @@ import SelectAll from "./select-all";
 import { bulkNotificationAction, markAllNotificationsRead } from "./actions";
 
 const PAGE_SIZE = 20;
-const kinds = ["announcement", "emergency_announcement", "announcement_review", "support_request", "club_application", "membership_request", "consent_due", "event_registration", "waitlist"];
+const kinds = ["admin_notification", "announcement", "emergency_announcement", "announcement_review", "support_request", "club_application", "membership_request", "consent_due", "event_registration", "waitlist"];
 
 function safeDate(value: string | undefined) {
   return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "";

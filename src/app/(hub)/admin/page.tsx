@@ -94,6 +94,7 @@ export default async function AdminPage() {
             <div className="mt-3 flex flex-wrap gap-2">
               {[
                 { label: "Post Announcement", href: "/admin/announcements" },
+                ...(user.role === "admin" ? [{ label: "Publish Notification", href: "/admin/notifications" }] : []),
                 { label: "Manage Clubs", href: "/admin/clubs" },
                 { label: "Support Queue", href: "/admin/support" },
                 { label: "Opportunities", href: "/admin/opportunities" },

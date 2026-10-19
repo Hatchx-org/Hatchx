@@ -146,7 +146,7 @@ export const getAllClubs = cache(async (limit?: number): Promise<Club[]> => {
     const ids = canonicalRows.map((row) => row.id);
     const [meetingResult, officerResult, advisorResult, announcementResult, mediaResult, linkResult] = await Promise.all([
       supabase.from("club_meetings").select("*").in("club_id", ids).order("day_of_week"),
-      supabase.from("club_officers").select("*").in("club_id", ids).order("title"),
+      supabase.from("club_officers").select("*").in("club_id", ids).order("sort_order").order("created_at"),
       supabase.from("club_advisors").select("*").in("club_id", ids),
       supabase.from("club_announcements").select("*").in("club_id", ids).eq("published", true).order("created_at", { ascending: false }),
       supabase.from("club_media").select("*").in("club_id", ids).order("created_at", { ascending: false }),

@@ -2,6 +2,9 @@
 -- Run once in Supabase SQL Editor after applying the current schema.sql.
 begin;
 
+alter table public.club_officers
+  add column if not exists sort_order integer not null default 0;
+
 create table if not exists public.pending_club_officers (
   id uuid primary key default gen_random_uuid(),
   officer_id uuid not null unique references public.club_officers(id) on delete cascade,
@@ -82,12 +85,13 @@ begin
   end if;
 
   insert into public.club_officers(
-    club_id,profile_id,display_name,title,term_start,term_end
+    club_id,profile_id,display_name,title,term_start,term_end,sort_order
   )
   values(
     p_club_id,target_profile.id,
     coalesce(nullif(target_profile.full_name,''),normalized_name),
-    btrim(p_title),p_term_start,p_term_end
+    btrim(p_title),p_term_start,p_term_end,
+    coalesce((select max(sort_order)+10 from public.club_officers where club_id=p_club_id),10)
   )
   returning id into officer_id;
 

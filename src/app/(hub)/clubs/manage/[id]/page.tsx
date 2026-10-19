@@ -54,7 +54,7 @@ export default async function ManageClubPage({ params, searchParams }: { params:
     supabase.from("club_meetings").select("*").eq("club_id", id).order("day_of_week"),
     supabase.from("club_memberships").select("id, profile_id, status, requested_at").eq("club_id", id).eq("status", "pending").order("requested_at"),
     supabase.from("club_memberships").select("id, profile_id, status, requested_at", { count: "exact" }).eq("club_id", id).eq("status", "active").order("requested_at").range(memberFrom, memberFrom + MEMBER_PAGE_SIZE - 1),
-    supabase.from("club_officers").select("*").eq("club_id", id).order("title"),
+    supabase.from("club_officers").select("*").eq("club_id", id).order("sort_order").order("created_at"),
     supabase.from("club_advisors").select("*").eq("club_id", id),
     supabase.from("club_media").select("*").eq("club_id", id).eq("media_type", "image").order("created_at", { ascending: false }),
     supabase.from("club_audit_log").select("*").eq("club_id", id).order("created_at", { ascending: false }).limit(50),

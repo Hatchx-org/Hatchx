@@ -167,6 +167,8 @@ export type Database = {
       submit_public_custom_form: { Args: { p_token: string; p_data: Record<string, string | number | boolean> }; Returns: string };
       can_govern_club: { Args: { p_club_id: string }; Returns: boolean };
       preassign_club_officer: { Args: { p_club_id: string; p_email: string; p_display_name: string; p_title: string; p_term_start: string | null; p_term_end: string | null }; Returns: string | null };
+      move_club_officer: { Args: { p_officer_id: string; p_direction: "up" | "down" }; Returns: undefined };
+      publish_admin_notification: { Args: { p_title: string; p_body: string; p_href?: string | null; p_audience?: string; p_club_id?: string | null; p_emergency?: boolean }; Returns: number };
       resolve_club_share_link: { Args: { p_id: string }; Returns: { club_id: string }[] };
       assign_account_role: { Args: { p_user_id: string; p_role: string; p_club_id?: string | null }; Returns: undefined };
       review_school_announcement: { Args: { p_id: string; p_approve: boolean; p_note: string }; Returns: undefined };
@@ -364,6 +366,7 @@ export type ClubOfficerRow = {
   term_start: string | null;
   term_end: string | null;
   avatar_path: string | null;
+  sort_order: number;
   created_at: string;
 };
 

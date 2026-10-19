@@ -449,6 +449,25 @@ export async function removeClubOfficer(formData: FormData) {
   return saved;
 }
 
+export async function moveClubOfficer(formData: FormData) {
+  const clubId = String(formData.get("club_id") ?? "");
+  const officerId = String(formData.get("officer_id") ?? "");
+  const direction = String(formData.get("direction") ?? "");
+  const context = await managerContext(clubId);
+  if (!context?.canGovern) return denied;
+  if (!officerId || !["up", "down"].includes(direction)) return invalid;
+  const { error } = await context.supabase.rpc("move_club_officer", {
+    p_officer_id: officerId,
+    p_direction: direction as "up" | "down",
+  });
+  if (error) return ["42703", "PGRST202"].includes(error.code ?? "")
+    ? { ok: false, message: "Apply supabase/admin-notifications-board-order.sql, then try again." }
+    : failed;
+  revalidatePath(`/clubs/manage/${clubId}`);
+  revalidatePath("/clubs", "layout");
+  return { ok: true, message: "Board order updated." };
+}
+
 export async function uploadOwnBoardAvatar(formData: FormData) {
   const user = await getCurrentUser();
   const clubId = String(formData.get("club_id") ?? "");
