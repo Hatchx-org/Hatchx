@@ -21,11 +21,27 @@ test.describe("login and registration", () => {
     await page.goto("/login");
 
     await expect(page.getByRole("heading", { name: "Welcome" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Sign in with Google" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Email sign in" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Hatchx home" })).toBeVisible();
 
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow).toBeLessThanOrEqual(1);
+  });
+
+  test("starts Google OAuth with a safe callback and account chooser", async ({ page }) => {
+    let oauthUrl = "";
+    await page.route("**/auth/v1/authorize**", async (route) => {
+      oauthUrl = route.request().url();
+      await route.abort();
+    });
+    await page.goto("/login?next=/calendar");
+    await page.getByRole("button", { name: "Sign in with Google" }).click();
+    await expect.poll(() => oauthUrl).toContain("provider=google");
+    const callback = new URL(new URL(oauthUrl).searchParams.get("redirect_to")!);
+    expect(callback.pathname).toBe("/auth/callback");
+    expect(callback.searchParams.get("next")).toBe("/calendar");
+    expect(oauthUrl).toContain("prompt=select_account");
   });
 
   test("shows student-only fields and manages multiple invitation codes", async ({ page }) => {

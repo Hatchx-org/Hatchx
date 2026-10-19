@@ -62,7 +62,7 @@ export default function EmailAccount({ next, recovery = false }: { next: string;
   function updateInvite(index: number, value: string) {
     setInviteFields((current) => current.map((item, itemIndex) => itemIndex === index ? value : item));
   }
-  return <section className="login-email mt-5 border-t border-black/10 pt-4 text-[#232b3b]">
+  return <section className="login-email text-[#232b3b]">
     <div className="mb-3 flex gap-2" aria-label="Account options">
       {(["login", "signup"] as const).map(value => <button key={value} disabled={pending} type="button" aria-pressed={mode === value} onClick={() => { setMode(value); setMessage(""); }} className={`min-h-10 flex-1 rounded-full px-3 text-sm font-semibold ${mode === value ? "bg-[#263a99] text-white" : "bg-black/5"}`}>{value === "signup" ? "Create account" : "Email sign in"}</button>)}
     </div>

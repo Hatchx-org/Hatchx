@@ -12,6 +12,15 @@ The database setup is intentionally kept to three SQL files.
    - `https://YOUR-DOMAIN/auth/confirm`
 5. Set `NEXT_PUBLIC_SITE_URL=https://YOUR-DOMAIN` in the hosting environment.
 
+## Google sign-in
+
+1. In Google Cloud Console, create an OAuth 2.0 Web application.
+2. Add `https://PROJECT-REF.supabase.co/auth/v1/callback` as an authorized redirect URI.
+3. In **Supabase → Authentication → Providers → Google**, enable Google and paste the Google client ID and client secret.
+4. Keep `https://YOUR-DOMAIN/auth/callback` in **Supabase → Authentication → URL Configuration → Redirect URLs**.
+
+Hatchx validates the returned email after OAuth and signs out accounts outside the configured NYC Public Schools domains. The Google client secret belongs only in Supabase—not in Vercel or this repository.
+
 The SQL is domain-neutral; changing domains never requires editing the schema.
 
 ## Other files

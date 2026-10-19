@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { safeNextPath } from "@/lib/navigation";
 import EmailAccount from "./email-account";
+import GoogleSignIn from "./google-sign-in";
 import { LogoMark } from "@/components/icons";
 
 function LoginBrand() {
@@ -48,6 +49,7 @@ export default function LoginCard() {
           This password reset link is invalid, expired, or was opened in a different browser. Request a new link below.
         </p>
       )}
+      <GoogleSignIn next={next} />
       <EmailAccount next={next} recovery={searchParams.get("mode") === "recovery"} />
       <p className="login-domain-note mt-4 text-center text-xs leading-5 text-[#5f6368]">Use your school account. On shared devices, leave “Remember this device” unchecked.</p>
     </div>
