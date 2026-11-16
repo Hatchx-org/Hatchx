@@ -20,28 +20,46 @@ jobs:
     steps:
       - name: Query a public database table
         env:
+          SITE_URL: ${{ vars.SITE_URL || 'https://www.hatchx.org' }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
           set -euo pipefail
-          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
-            echo "Add SUPABASE_URL and SUPABASE_ANON_KEY as repository secrets."
-            exit 1
+          response_file="$(mktemp)"
+          trap 'rm -f "$response_file"' EXIT
+
+          if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_ANON_KEY" ]; then
+            endpoint="${SUPABASE_URL%/}/rest/v1/site_content?select=key&limit=1"
+            status="$({ curl --silent --show-error \
+              --connect-timeout 15 \
+              --max-time 45 \
+              --retry 3 \
+              --retry-all-errors \
+              --output "$response_file" \
+              --write-out "%{http_code}" \
+              --header "apikey: $SUPABASE_ANON_KEY" \
+              --header "Accept: application/json" \
+              "$endpoint"; } || true)"
+            mode="direct Supabase"
+          else
+            endpoint="${SITE_URL%/}/api/health/database"
+            status="$({ curl --silent --show-error \
+              --connect-timeout 15 \
+              --max-time 45 \
+              --retry 3 \
+              --retry-all-errors \
+              --output "$response_file" \
+              --write-out "%{http_code}" \
+              --header "Accept: application/json" \
+              --header "Cache-Control: no-cache" \
+              "$endpoint"; } || true)"
+            mode="deployed application"
           fi
 
-          response_file="$(mktemp)"
-          status="$({ curl --silent --show-error \
-            --output "$response_file" \
-            --write-out "%{http_code}" \
-            --header "apikey: $SUPABASE_ANON_KEY" \
-            --header "Authorization: Bearer $SUPABASE_ANON_KEY" \
-            --header "Accept: application/json" \
-            "$SUPABASE_URL/rest/v1/site_content?select=key&limit=1"; } || true)"
-
-          if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
-            echo "Supabase database query failed with HTTP $status."
+          if ! [[ "$status" =~ ^[0-9]{3}$ ]] || [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+            echo "Supabase database query through $mode failed with HTTP ${status:-000}."
             sed -n '1,20p' "$response_file"
             exit 1
           fi
 
-          echo "Supabase database query succeeded with HTTP $status."
+          echo "Supabase database query through $mode succeeded with HTTP $status."

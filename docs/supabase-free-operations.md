@@ -10,10 +10,19 @@ These jobs reduce the chance that a low-activity Free Plan project is paused, bu
 only a paid Supabase plan guarantees that a project will not be paused. A paused
 project must first be resumed in the Supabase dashboard before the jobs can query it.
 
-## Repository secrets
+## Keepalive configuration
 
-In GitHub, open **Settings → Secrets and variables → Actions → New repository secret**
-and add:
+By default, the workflow calls `https://www.hatchx.org/api/health/database`. The
+endpoint runs an uncached, read-only database query using the Supabase variables
+already configured in Vercel. No GitHub secret is required for this mode.
+
+If the production domain changes, add a GitHub Actions repository variable named
+`SITE_URL` with the new origin. Do not include a trailing slash.
+
+The workflow can alternatively query Supabase directly. In GitHub, open
+**Settings → Secrets and variables → Actions → New repository secret** and add
+both secrets below. If only one is present, the workflow safely uses the deployed
+application instead.
 
 | Secret | Value |
 | --- | --- |
@@ -22,8 +31,8 @@ and add:
 
 Never place these values directly in a workflow, source file, issue, or commit.
 
-After adding the secrets, open **Actions**, run `Supabase keepalive` once with
-**Run workflow**, and confirm that the job is green. Scheduled workflows run from the
+After deployment, open **Actions**, run `Supabase keepalive` once with **Run
+workflow**, and confirm that the job is green. Scheduled workflows run from the
 default branch and GitHub may delay them during busy periods. GitHub may disable
 scheduled workflows in a public repository after 60 days without repository
 activity, so keep normal development activity or re-enable the workflow in the
