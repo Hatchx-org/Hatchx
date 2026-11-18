@@ -1,10 +1,12 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { safeNextPath } from "@/lib/navigation";
 import EmailAccount from "./email-account";
 import GoogleSignIn from "./google-sign-in";
 import { LogoMark } from "@/components/icons";
+import TurnstileChallenge from "./turnstile-challenge";
 
 function LoginBrand() {
   return <div className="login-brand flex items-center gap-3"><LogoMark className="h-11 w-11 sm:h-12 sm:w-12" variant="light" /><p className="text-2xl font-bold text-[#4285f4] sm:text-3xl">Hatchx</p></div>;
@@ -27,6 +29,10 @@ export default function LoginCard() {
   const searchParams = useSearchParams();
   const next = safeNextPath(searchParams.get("next"));
   const error = searchParams.get("error");
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaReset, setCaptchaReset] = useState(0);
+  const consumeCaptcha = useCallback(() => setCaptchaReset((value) => value + 1), []);
   return (
     <div>
       <LoginBrand />
@@ -49,8 +55,9 @@ export default function LoginCard() {
           This password reset link is invalid, expired, or was opened in a different browser. Request a new link below.
         </p>
       )}
-      <GoogleSignIn next={next} />
-      <EmailAccount next={next} recovery={searchParams.get("mode") === "recovery"} />
+      {siteKey && <TurnstileChallenge siteKey={siteKey} resetSignal={captchaReset} onToken={setCaptchaToken} />}
+      <GoogleSignIn next={next} captchaToken={captchaToken} captchaRequired={Boolean(siteKey)} onCaptchaConsumed={consumeCaptcha} />
+      <EmailAccount next={next} recovery={searchParams.get("mode") === "recovery"} captchaToken={captchaToken} captchaRequired={Boolean(siteKey)} onCaptchaConsumed={consumeCaptcha} />
       <p className="login-domain-note mt-4 text-center text-xs leading-5 text-[#5f6368]">Use your school account. On shared devices, leave “Remember this device” unchecked.</p>
     </div>
   );

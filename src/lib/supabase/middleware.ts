@@ -31,11 +31,10 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  // IMPORTANT: Do not run code between createServerClient and getUser().
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
+  // IMPORTANT: Do not run code between client creation and getClaims(). It
+  // refreshes only when needed, then verifies modern asymmetric JWTs locally
+  // instead of making a getUser network request on every page navigation.
+  const { data, error } = await supabase.auth.getClaims();
 
   if (error) {
     if (!shouldClearAuthCookies(error)) return { response: supabaseResponse, user: null };
@@ -49,5 +48,7 @@ export async function updateSession(request: NextRequest) {
     return { response: supabaseResponse, user: null };
   }
 
+  const claims = data?.claims;
+  const user = claims?.sub ? { id: String(claims.sub), email: typeof claims.email === "string" ? claims.email : undefined } : null;
   return { response: supabaseResponse, user };
 }

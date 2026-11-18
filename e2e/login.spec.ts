@@ -8,8 +8,8 @@ const student = {
   grade: "10",
 };
 
-async function openStudentRegistration(page: Page) {
-  await page.goto("/login");
+async function openStudentRegistration(page: Page, path = "/login") {
+  await page.goto(path);
   await page.getByRole("button", { name: "Create account" }).click();
   await page.getByLabel("School email").fill(student.email);
   await expect(page.getByLabel("OSIS number")).toBeVisible();
@@ -95,6 +95,33 @@ test.describe("login and registration", () => {
 
     await expect(page.getByRole("status")).toContainText("NYC Public Schools");
     expect(called).toBe(false);
+  });
+
+  test("keeps registration progress and honors Retry-After after a Supabase 429", async ({ page }) => {
+    let requests = 0;
+    await page.route("**/auth/v1/signup**", async (route) => {
+      requests += 1;
+      await route.fulfill({
+        status: 429,
+        headers: { "Access-Control-Expose-Headers": "Retry-After", "Retry-After": "120" },
+        contentType: "application/json",
+        body: JSON.stringify({ code: "over_request_rate_limit", message: "Too many requests" }),
+      });
+    });
+    await openStudentRegistration(page, "/login?next=%2Fclubs%2Fcheck-in%3Fcode%3DSCHOOL26");
+    await page.getByLabel("Full name").fill("Rate Limited Student");
+    await page.getByLabel("OSIS number").fill(student.osis);
+    await page.getByLabel("Grade").selectOption(student.grade);
+    await page.getByLabel("Password").fill(student.password);
+    await page.getByRole("checkbox", { name: /I have read/ }).check();
+    await page.getByRole("button", { name: "Create account" }).last().click();
+
+    await expect(page.getByRole("status")).toContainText("Too many sign-in requests");
+    await expect(page.getByRole("button", { name: "Try again in 120s" })).toBeDisabled();
+    await expect(page.getByLabel("Full name")).toHaveValue("Rate Limited Student");
+    await expect(page.getByLabel("OSIS number")).toHaveValue(student.osis);
+    await expect(page).toHaveURL(/next=%2Fclubs%2Fcheck-in%3Fcode%3DSCHOOL26/);
+    expect(requests).toBe(1);
   });
 
   test("has no serious or critical Axe violations", async ({ page }) => {

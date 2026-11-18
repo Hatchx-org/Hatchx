@@ -1,17 +1,18 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { createBrowserClient } from "@/lib/supabase/client";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { consumeAuthRetryAfterSeconds, createBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import Link from "next/link";
 import { rememberDeviceCookie } from "@/lib/supabase/auth-session";
 import { isStudentEmail, MAX_INVITE_CODES, normalizeGrade, normalizeInviteCodes, normalizeOsis } from "@/lib/student-registration";
 import { useRouter } from "next/navigation";
+import { authFailureLog, authFailureMessage, isAuthRateLimitError, type AuthErrorLike } from "@/lib/auth-errors";
 
 const fieldClass = "min-h-11 w-full rounded-xl border border-[#c7cede] bg-white px-3.5 text-[16px] text-[#172033] outline-none transition focus:border-[#4969d1] focus:ring-4 focus:ring-[#4969d1]/10";
 
 /** Email registration requires verification; database triggers assign roles. */
-export default function EmailAccount({ next, recovery = false }: { next: string; recovery?: boolean }) {
+export default function EmailAccount({ next, recovery = false, captchaToken, captchaRequired, onCaptchaConsumed }: { next: string; recovery?: boolean; captchaToken: string | null; captchaRequired: boolean; onCaptchaConsumed: () => void }) {
   const router = useRouter();
   const [mode, setMode] = useState<"login" | "signup" | "recovery">(recovery ? "recovery" : "login");
   const [pending, setPending] = useState(false);
@@ -19,9 +20,19 @@ export default function EmailAccount({ next, recovery = false }: { next: string;
   const [remember, setRemember] = useState(false);
   const [email, setEmail] = useState("");
   const [inviteFields, setInviteFields] = useState([""]);
+  const [blockedUntil, setBlockedUntil] = useState(0);
+  const [clock, setClock] = useState(0);
+  const requestInFlight = useRef(false);
   const studentSignup = mode === "signup" && isStudentEmail(email);
+  const remainingSeconds = Math.max(0, Math.ceil((blockedUntil - clock) / 1000));
+  useEffect(() => {
+    if (!blockedUntil) return;
+    const timer = window.setInterval(() => setClock(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [blockedUntil]);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (requestInFlight.current || remainingSeconds > 0) return;
     const form = new FormData(event.currentTarget);
     const email = String(form.get("email")).trim().toLowerCase();
     const password = String(form.get("password"));
@@ -36,6 +47,11 @@ export default function EmailAccount({ next, recovery = false }: { next: string;
       setMessage("Students must enter a valid 9-digit OSIS number and select grade 9–12.");
       return;
     }
+    if (captchaRequired && !captchaToken) {
+      setMessage("Complete the security check before continuing.");
+      return;
+    }
+    requestInFlight.current = true;
     setPending(true);
     setMessage("");
     try {
@@ -43,23 +59,40 @@ export default function EmailAccount({ next, recovery = false }: { next: string;
       const client = createBrowserClient();
       if (mode === "recovery") {
         rememberDeviceCookie(false);
-        const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/auth/callback?next=/reset-password` });
-        setMessage(error ? "Unable to send the recovery email. Try again later or contact Support." : "If this address has an account, you will receive a password reset email. Use the newest link and open it in this browser.");
+        const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`, captchaToken: captchaToken ?? undefined });
+        setMessage(error ? handleAuthError(error, "recovery") : "If this address has an account, you will receive a password reset email. Use the newest link and open it in this browser.");
       } else if (mode === "signup") {
         const inviteCodes = normalizeInviteCodes(form.getAll("invite_code").map(String));
         const { error } = await client.auth.signUp({ email, password, options: {
           data: { full_name: String(form.get("name")).trim(), osis_number: osis, grade_level: grade, invite_codes: inviteCodes },
           emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+          captchaToken: captchaToken ?? undefined,
         } });
-        setMessage(error ? "Registration could not complete. Check your information or contact Support." : "Check your school email to confirm your account. Any valid Club invitation codes have been applied.");
+        if (error) setMessage(handleAuthError(error, "signup"));
+        else setMessage("Check your school email to confirm your account. Any valid Club invitation codes have been applied.");
       } else {
-        const { error } = await client.auth.signInWithPassword({ email, password });
-        if (error) setMessage("Sign-in failed. Check your email and password, and confirm your email first.");
+        const { error } = await client.auth.signInWithPassword({ email, password, options: { captchaToken: captchaToken ?? undefined } });
+        if (error) setMessage(handleAuthError(error, "signin"));
         else router.push(`/auth/complete?next=${encodeURIComponent(next)}`);
       }
-    } catch {
+    } catch (error) {
+      console.warn("Authentication request failed", authFailureLog(mode, error as AuthErrorLike, null));
       setMessage("Unable to connect. Please try again.");
-    } finally { setPending(false); }
+    } finally {
+      onCaptchaConsumed();
+      requestInFlight.current = false;
+      setPending(false);
+    }
+  }
+  function handleAuthError(error: AuthErrorLike, operation: "signin" | "signup" | "recovery") {
+    const retryAfter = consumeAuthRetryAfterSeconds();
+    if (isAuthRateLimitError(error)) {
+      const cooldown = retryAfter ?? 60;
+      setClock(Date.now());
+      setBlockedUntil(Date.now() + cooldown * 1000);
+    }
+    console.warn("Authentication request failed", authFailureLog(operation, error, retryAfter));
+    return authFailureMessage(error, retryAfter, operation);
   }
   function updateInvite(index: number, value: string) {
     setInviteFields((current) => current.map((item, itemIndex) => itemIndex === index ? value : item));
@@ -79,7 +112,7 @@ export default function EmailAccount({ next, recovery = false }: { next: string;
       {message && <p role="status" className="rounded-lg bg-blue-50 p-3 text-sm leading-5 text-blue-950">{message}</p>}
       {mode === "signup" && <label className="flex items-start gap-2 text-xs leading-5"><input name="terms" type="checkbox" required className="mt-1" /><span>I have read the <Link href="/privacy" className="underline">Privacy Policy</Link> and agree to the <Link href="/terms" className="underline">Terms of Use</Link>.</span></label>}
       {mode === "login" && <label className="flex items-center gap-2 text-xs leading-5"><input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} /> Remember this device (avoid on shared computers)</label>}
-      <button disabled={pending || !isSupabaseConfigured()} className="min-h-10 rounded-full bg-[#263a99] px-4 font-semibold text-white disabled:opacity-50">{pending ? "Please wait…" : mode === "signup" ? "Create account" : mode === "recovery" ? "Send reset link" : "Sign in"}</button>
+      <button disabled={pending || remainingSeconds > 0 || !isSupabaseConfigured() || (captchaRequired && !captchaToken)} className="min-h-10 rounded-full bg-[#263a99] px-4 font-semibold text-white disabled:opacity-50">{pending ? "Please wait…" : remainingSeconds > 0 ? `Try again in ${remainingSeconds}s` : mode === "signup" ? "Create account" : mode === "recovery" ? "Send reset link" : "Sign in"}</button>
     </form>
     {mode === "login" && <button type="button" disabled={pending} onClick={() => { setMode("recovery"); setMessage(""); }} className="mt-2 min-h-10 text-sm text-[#263a99] underline">Forgot password?</button>}
   </section>;
