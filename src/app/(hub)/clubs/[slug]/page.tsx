@@ -331,7 +331,7 @@ export default async function ClubDetailPage({
           </p>
         ) : (
           <>
-            <p className="mt-2 text-sm text-muted">Our officers for the 2025–2026 school year.</p>
+            <p className="mt-2 text-sm text-muted">Our officers for this school year: </p>
             <div className="mt-9 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
               {club.officers.map((o) => (
                 <div
