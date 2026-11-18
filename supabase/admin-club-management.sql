@@ -1,4 +1,4 @@
-+-- Centralized Admin Club Management
+-- Centralized Admin Club Management
 -- Run once in a new Supabase SQL Editor query.
 begin;
 
