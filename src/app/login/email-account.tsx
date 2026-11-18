@@ -6,11 +6,13 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import Link from "next/link";
 import { rememberDeviceCookie } from "@/lib/supabase/auth-session";
 import { isStudentEmail, MAX_INVITE_CODES, normalizeGrade, normalizeInviteCodes, normalizeOsis } from "@/lib/student-registration";
+import { useRouter } from "next/navigation";
 
 const fieldClass = "min-h-11 w-full rounded-xl border border-[#c7cede] bg-white px-3.5 text-[16px] text-[#172033] outline-none transition focus:border-[#4969d1] focus:ring-4 focus:ring-[#4969d1]/10";
 
 /** Email registration requires verification; database triggers assign roles. */
 export default function EmailAccount({ next, recovery = false }: { next: string; recovery?: boolean }) {
+  const router = useRouter();
   const [mode, setMode] = useState<"login" | "signup" | "recovery">(recovery ? "recovery" : "login");
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
@@ -53,7 +55,7 @@ export default function EmailAccount({ next, recovery = false }: { next: string;
       } else {
         const { error } = await client.auth.signInWithPassword({ email, password });
         if (error) setMessage("Sign-in failed. Check your email and password, and confirm your email first.");
-        else window.location.assign(`/auth/complete?next=${encodeURIComponent(next)}`);
+        else router.push(`/auth/complete?next=${encodeURIComponent(next)}`);
       }
     } catch {
       setMessage("Unable to connect. Please try again.");
