@@ -244,6 +244,8 @@ export type Database = {
       set_club_officer_avatar: { Args: { p_officer_id: string; p_avatar_path: string | null }; Returns: string | null };
       set_profile_grade: { Args: { p_user_id: string; p_grade_level: number | null }; Returns: undefined };
       dispatch_due_announcement_notifications: { Args: { p_announcement_id?: string | null }; Returns: number };
+      admin_delete_club: { Args: { p_club_id: string }; Returns: boolean };
+      get_admin_club_member_counts: { Args: { p_club_ids: string[] }; Returns: { club_id: string; member_count: number }[] };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
