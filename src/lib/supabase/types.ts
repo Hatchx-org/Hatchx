@@ -216,6 +216,14 @@ export type Database = {
         Args: { p_code: string; p_comments?: string | null };
         Returns: ClubCheckInResult[];
       };
+      get_club_check_in_status: {
+        Args: { p_code: string };
+        Returns: ClubCheckInStatus[];
+      };
+      update_my_profile: {
+        Args: { p_full_name: string; p_osis_number?: string | null; p_grade_level?: number | null; p_so_number?: string | null };
+        Returns: undefined;
+      };
       get_club_attendance_records: {
         Args: { p_club_id: string; p_limit?: number };
         Returns: ClubAttendanceRecordDetail[];
@@ -581,10 +589,20 @@ export type ClubAttendanceRecordDetail = {
 export type MyClubAttendance = { id: string; session_label: string; club_name: string; club_slug: string; checked_in_at: string };
 
 export type ClubCheckInResult = {
-  result: "unauthenticated" | "invalid" | "not_member" | "checked_in" | "already_checked_in";
+  result: "unauthenticated" | "invalid" | "expired" | "scheduled" | "closed" | "not_member" | "pending_member" | "checked_in" | "already_checked_in";
   message: string;
   club_slug: string | null;
   session_label: string | null;
+};
+
+export type ClubCheckInStatus = {
+  status: "invalid" | "expired" | "scheduled" | "closed" | "not_member" | "pending_member" | "ready" | "already_checked_in";
+  message: string;
+  club_id: string | null;
+  club_name: string | null;
+  club_slug: string | null;
+  session_label: string | null;
+  membership_status: string | null;
 };
 
 export type AnnouncementVersionRow = {

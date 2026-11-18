@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { safeNextPath } from "@/lib/navigation";
 import { isAllowedEmail } from "@/lib/email-access";
+import { profileCompletionPath, studentProfileNeedsCompletion } from "@/lib/profile-completion";
 
 type EmailOtpType = "signup" | "invite" | "magiclink" | "recovery" | "email_change" | "email";
 const emailOtpTypes = new Set<EmailOtpType>(["signup", "invite", "magiclink", "recovery", "email_change", "email"]);
@@ -38,7 +39,8 @@ export async function handleAuthCallback(request: Request) {
     return NextResponse.redirect(new URL("/login?error=domain", url.origin), 303);
   }
 
-  const destination = new URL(next, url.origin);
+  const { data: profile } = await supabase.from("profiles").select("role, osis_number, grade_level").eq("id", user.id).maybeSingle();
+  const destination = new URL(studentProfileNeedsCompletion(profile) ? profileCompletionPath(next) : next, url.origin);
   const response = NextResponse.redirect(destination, 303);
   response.headers.set("Cache-Control", "private, no-store, max-age=0");
   return response;

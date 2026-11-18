@@ -53,7 +53,7 @@ export default function EmailAccount({ next, recovery = false }: { next: string;
       } else {
         const { error } = await client.auth.signInWithPassword({ email, password });
         if (error) setMessage("Sign-in failed. Check your email and password, and confirm your email first.");
-        else window.location.assign(next);
+        else window.location.assign(`/auth/complete?next=${encodeURIComponent(next)}`);
       }
     } catch {
       setMessage("Unable to connect. Please try again.");

@@ -1,6 +1,7 @@
 # Supabase setup
 
-The database setup is intentionally kept to three SQL files.
+The database setup uses one consolidated schema for new projects and small,
+standalone upgrades for existing projects.
 
 ## Brand-new project
 
@@ -25,6 +26,7 @@ The SQL is domain-neutral; changing domains never requires editing the schema.
 
 ## Other files
 
+- [`quick-checkin-profile-upgrade.sql`](./quick-checkin-profile-upgrade.sql): required standalone, idempotent upgrade for preserved QR destinations, Google student onboarding, membership-aware check-in states, and secure profile editing.
 - [`attendance-comments-so-number.sql`](./attendance-comments-so-number.sql): standalone, idempotent upgrade for an existing Hatchx database. Run this file to add attendance comments and optional profile SO numbers without rerunning the full schema.
 - [`security-hardening-v2.sql`](./security-hardening-v2.sql): standalone, idempotent upgrade for an existing Hatchx database. Run it once to rate-limit public forms and enforce payload limits inside the database RPC. The `v2` filename prevents accidentally reusing an older SQL Editor tab.
 - [`upgrade-existing.sql`](./upgrade-existing.sql): compatibility upgrade for the original pre-Hatchx database only. Back up the database before running it. Do not run this file on a new or partially installed project; rerun `schema.sql` instead.

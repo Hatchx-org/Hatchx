@@ -109,3 +109,11 @@ test("unauthenticated users are redirected away from protected profile pages", a
   await page.goto("/profile");
   await expect(page).toHaveURL(/\/login\?next=%2Fprofile|\/login\?next=\/profile/);
 });
+
+test("a scanned attendance code survives the sign-in redirect", async ({ page }) => {
+  await page.goto("/clubs/check-in?code=ABCD2345");
+  await expect(page).toHaveURL(/\/login\?/);
+  const current = new URL(page.url());
+  expect(current.pathname).toBe("/login");
+  expect(current.searchParams.get("next")).toBe("/clubs/check-in?code=ABCD2345");
+});

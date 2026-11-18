@@ -204,6 +204,8 @@ export async function requestClubMembership(formData: FormData): Promise<void> {
   }
   revalidatePath(`/clubs/${slug}`);
   revalidatePath("/profile");
+  const returnTo = String(formData.get("return_to") ?? "");
+  if (returnTo.startsWith("/clubs/check-in")) revalidatePath("/clubs/check-in");
 }
 
 export async function leaveClub(formData: FormData): Promise<void> {

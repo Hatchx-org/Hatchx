@@ -48,7 +48,7 @@ export default function GoogleSignIn({ next }: { next: string }) {
         try {
           const { error } = await createBrowserClient().auth.signInWithIdToken({ provider: "google", token: credential, nonce });
           if (error) throw error;
-          router.push(`/auth/google/complete?next=${encodeURIComponent(next)}`);
+          router.push(`/auth/complete?next=${encodeURIComponent(next)}`);
         } catch {
           setMessage("Google sign-in could not complete. Try email sign-in or contact Support.");
           setPending(false);
