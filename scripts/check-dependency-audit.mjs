@@ -32,21 +32,43 @@ if (total === 0) {
   process.exit(0);
 }
 
-const allowedAdvisories = new Set(["https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"]);
-const allowedChain = new Set(["braces", "micromatch", "fast-glob", "@next/eslint-plugin-next", "eslint-config-next"]);
+const allowedAdvisories = new Set([
+  "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+  // No patched picomatch release exists yet. This is restricted below to the
+  // ESLint/TypeScript development toolchain and is never shipped at runtime.
+  "https://github.com/advisories/GHSA-fc5q-39xc-vjpf",
+]);
+const allowedChain = new Set([
+  "braces",
+  "picomatch",
+  "micromatch",
+  "fast-glob",
+  "fdir",
+  "tinyglobby",
+  "@next/eslint-plugin-next",
+  "@typescript-eslint/eslint-plugin",
+  "@typescript-eslint/parser",
+  "@typescript-eslint/type-utils",
+  "@typescript-eslint/typescript-estree",
+  "@typescript-eslint/utils",
+  "eslint-config-next",
+  "eslint-import-resolver-typescript",
+  "typescript-eslint",
+]);
 const advisories = Object.values(report.vulnerabilities ?? {}).flatMap(vulnerability =>
   (vulnerability.via ?? []).filter(item => typeof item === "object" && item.url),
 );
 const unknownAdvisories = advisories.filter(advisory => !allowedAdvisories.has(advisory.url));
 const unknownPackages = Object.keys(report.vulnerabilities ?? {}).filter(name => !allowedChain.has(name));
 const lock = JSON.parse(readFileSync(new URL("../package-lock.json", import.meta.url), "utf8"));
-const braces = lock.packages?.["node_modules/braces"];
+const vulnerableNodes = Object.values(report.vulnerabilities ?? {}).flatMap(vulnerability => vulnerability.nodes ?? []);
+const vulnerableNodesAreDevOnly = vulnerableNodes.length > 0 && vulnerableNodes.every(path => lock.packages?.[path]?.dev === true);
 
-if (unknownAdvisories.length || unknownPackages.length || !braces?.dev || !advisories.length) {
+if (unknownAdvisories.length || unknownPackages.length || !vulnerableNodesAreDevOnly || !advisories.length) {
   console.error(JSON.stringify(report.vulnerabilities, null, 2));
   console.error("Dependency audit failed: an unapproved or production-reachable vulnerability was found.");
   process.exit(1);
 }
 
-console.warn(`Dependency audit passed with one temporary development-only exception: GHSA-vfj7-8cjw-p6xm in braces ${braces.version}.`);
-console.warn("The exception is limited to the ESLint toolchain and should be removed when an upstream patched release is available.");
+console.warn(`Dependency audit passed with ${allowedAdvisories.size} temporary development-only exception(s).`);
+console.warn("The exceptions are limited to the ESLint/TypeScript toolchain and should be removed when upstream patched releases are available.");
